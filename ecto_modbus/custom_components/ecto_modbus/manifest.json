@@ -1,0 +1,10 @@
+{
+  "domain": "ecto_modbus",
+  "name": "Ectocontrol Modbus Devices",
+  "version": "1.0.0",
+  "documentation": "https://github.com/your_name/ecto_modbus",
+  "requirements": ["pymodbus>=3.6.4"],
+  "codeowners": ["@your_github"],
+  "config_flow": false,
+  "iot_class": "local_push"
+}
