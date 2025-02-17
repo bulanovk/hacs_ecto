@@ -48,69 +48,113 @@ CONFIG_SCHEMA = vol.Schema({
     })
 }, extra=vol.ALLOW_EXTRA)
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    conf = config[DOMAIN]
-    slaves = {}
+# async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+#     conf = config[DOMAIN]
+#     slaves = {}
+#     devices = []
+#
+#     for device_conf in conf["devices"]:
+#         device_class = DEVICE_CLASSES[device_conf["type"]]
+#         device = device_class(device_conf)
+#
+#         if hasattr(device, 'async_init'):
+#             await device.async_init(hass)
+#
+#         store = ModbusSlaveContext(
+#             hr=ModbusSequentialDataBlock(0x00, device.holding_registers),
+#             ir=ModbusSequentialDataBlock(0x10, device.input_registers),
+#             zero_mode=True
+#         )
+#
+#         slaves[device.addr] = store
+#         devices.append(device)
+#
+#     context = ModbusServerContext(slaves=slaves, single=False)
+#
+#     await StartAsyncSerialServer(
+#         context,
+#         port=conf["port"],
+#         baudrate=BAUDRATE,
+#         parity="N",
+#         stopbits=1,
+#         bytesize=8,
+#         broadcast_enable=True
+#     )
+#
+#     hass.data[DOMAIN] = {
+#         "devices": devices,
+#         "context": context
+#     }
+#
+#     hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
+#     return True
+
+async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
+    """Настройка через UI"""
+    config = entry.data
     devices = []
 
-    for device_conf in conf["devices"]:
-        device_class = DEVICE_CLASSES[device_conf["type"]]
+    # Инициализация устройств
+    for device_conf in config.get('devices', []):
+        device_type = device_conf['type']
+        if device_type not in DEVICE_CLASSES:
+            continue
+
+        device_class = DEVICE_CLASSES[device_type]
         device = device_class(device_conf)
 
-        if hasattr(device, 'async_init'):
-            await device.async_init(hass)
+        if hasattr(device, 'setup'):
+            await device.setup(hass)
 
+        devices.append(device)
+
+    # Запуск Modbus сервера
+    await setup_modbus_server(hass, config, devices)
+
+    # Регистрация платформ
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(entry, "switch")
+    )
+
+    return True
+
+async def setup_modbus_server(hass, config, devices):
+    """Настройка Modbus сервера"""
+    slaves = {}
+    for device in devices:
         store = ModbusSlaveContext(
             hr=ModbusSequentialDataBlock(0x00, device.holding_registers),
             ir=ModbusSequentialDataBlock(0x10, device.input_registers),
             zero_mode=True
         )
-
         slaves[device.addr] = store
-        devices.append(device)
 
     context = ModbusServerContext(slaves=slaves, single=False)
 
-    await StartAsyncSerialServer(
-        context,
-        port=conf["port"],
-        baudrate=BAUDRATE,
-        parity="N",
-        stopbits=1,
-        bytesize=8,
-        broadcast_enable=True
-    )
+    try:
+        await StartAsyncSerialServer(
+            context,
+            port=config['port'],
+            baudrate=BAUDRATE,
+            parity="N",
+            stopbits=1,
+            bytesize=8,
+            broadcast_enable=True
+        )
+    except Exception as e:
+        _LOGGER.error("Failed to start Modbus server: %s", e)
+        return False
 
-    hass.data[DOMAIN] = {
-        "devices": devices,
-        "context": context
+    hass.data.setdefault(DOMAIN, {})[config['port']] = {
+        'context': context,
+        'devices': devices
     }
 
-    hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
+async def async_unload_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
+    """Выгрузка конфигурации"""
+    await hass.config_entries.async_forward_entry_unload(entry, "switch")
     return True
 
-async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
-    config = entry.data
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
-        "config": config,
-        "devices": []
-    }
-
-    # Инициализация Modbus сервера
-    await setup_modbus_server(hass, config)
-
-    # Регистрация сервисов
-    hass.services.async_register(
-        DOMAIN,
-        "add_device",
-        add_device_service
-    )
-
-    return True
-
-async def setup_modbus_server(hass, config):
-    # Логика инициализации сервера из предыдущих реализаций
-    pass
 
 async def add_device_service(call):
     """Сервис для добавления устройств через UI"""
