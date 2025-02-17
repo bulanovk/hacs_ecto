@@ -88,3 +88,38 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
     return True
+
+async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
+    config = entry.data
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+        "config": config,
+        "devices": []
+    }
+
+    # Инициализация Modbus сервера
+    await setup_modbus_server(hass, config)
+
+    # Регистрация сервисов
+    hass.services.async_register(
+        DOMAIN,
+        "add_device",
+        add_device_service
+    )
+
+    return True
+
+async def setup_modbus_server(hass, config):
+    # Логика инициализации сервера из предыдущих реализаций
+    pass
+
+async def add_device_service(call):
+    """Сервис для добавления устройств через UI"""
+    entry_id = call.data["entry_id"]
+    device_config = call.data["device"]
+
+    entry = hass.config_entries.async_get_entry(entry_id)
+    new_data = dict(entry.data)
+    new_data["devices"].append(device_config)
+
+    hass.config_entries.async_update_entry(entry, data=new_data)
+
