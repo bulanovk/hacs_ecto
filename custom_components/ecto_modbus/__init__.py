@@ -1,6 +1,6 @@
 import logging
 import voluptuous as vol
-from pymodbus.server.async_io import StartAsyncSerialServer
+from pymodbus.server import StartAsyncSerialServer
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.datastore import ModbusSequentialDataBlock
 from homeassistant.core import HomeAssistant
@@ -89,7 +89,7 @@ CONFIG_SCHEMA = vol.Schema({
 #     hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
 #     return True
 
-async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     """Настройка через UI"""
     config = entry.data
     devices = []
@@ -150,20 +150,20 @@ async def setup_modbus_server(hass, config, devices):
         'devices': devices
     }
 
-async def async_unload_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
     """Выгрузка конфигурации"""
     await hass.config_entries.async_forward_entry_unload(entry, "switch")
     return True
 
 
-async def add_device_service(call):
-    """Сервис для добавления устройств через UI"""
-    entry_id = call.data["entry_id"]
-    device_config = call.data["device"]
-
-    entry = hass.config_entries.async_get_entry(entry_id)
-    new_data = dict(entry.data)
-    new_data["devices"].append(device_config)
-
-    hass.config_entries.async_update_entry(entry, data=new_data)
+# async def add_device_service(call):
+#     """Сервис для добавления устройств через UI"""
+#     entry_id = call.data["entry_id"]
+#     device_config = call.data["device"]
+#
+#     entry = hass.config_entries.async_get_entry(entry_id)
+#     new_data = dict(entry.data)
+#     new_data["devices"].append(device_config)
+#
+#     hass.config_entries.async_update_entry(entry, data=new_data)
 
