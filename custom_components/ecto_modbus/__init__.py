@@ -112,10 +112,7 @@ async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     await setup_modbus_server(hass, config, devices)
 
     # Регистрация платформ
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "switch")
-    )
-
+    await hass.config_entries.async_forward_entry_setup(entry, "switch")
     return True
 
 async def setup_modbus_server(hass, config, devices):
