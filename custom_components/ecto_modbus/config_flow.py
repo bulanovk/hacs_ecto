@@ -7,7 +7,11 @@ from .const import DOMAIN, DEFAULT_BAUDRATE, DEVICE_TYPES
 class EctoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
-    async def async_step_user(self, user_input=None) -> FlowResult:
+    async def async_step_user(
+            self,
+            user_input: dict | None = None,
+    ) -> config_entries.FlowResult:
+
         if user_input is not None:
             return self.async_create_entry(
                 title=f"Ecto Modbus ({user_input['port']})",
@@ -45,16 +49,16 @@ class EctoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             })
         )
 
-class EctoOptionsFlow(config_entries.OptionsFlow):
-    def __init__(self, config_entry):
-        self.config_entry = config_entry
-
-    async def async_step_init(self, user_input=None):
-        return await self.async_step_device_list()
-
-    async def async_step_device_list(self, user_input=None):
-        devices = self.config_entry.data.get("devices", [])
-        return self.async_show_menu(
-            step_id="device_list",
-            menu_options=["add_device", "remove_device"]
-        )
+# class EctoOptionsFlow(config_entries.OptionsFlow):
+#     def __init__(self, config_entry):
+#         self.config_entry = config_entry
+#
+#     async def async_step_init(self, user_input=None):
+#         return await self.async_step_device_list()
+#
+#     async def async_step_device_list(self, user_input=None):
+#         devices = self.config_entry.data.get("devices", [])
+#         return self.async_show_menu(
+#             step_id="device_list",
+#             menu_options=["add_device", "remove_device"]
+#         )
