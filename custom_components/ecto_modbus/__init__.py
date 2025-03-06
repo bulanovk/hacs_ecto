@@ -90,7 +90,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         "context": context
     }
 
-    load_platform("switch", DOMAIN, {}, config)
+    load_platform(hass, "switch", DOMAIN, {}, config)
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
