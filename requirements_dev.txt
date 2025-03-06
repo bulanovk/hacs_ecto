@@ -1,4 +1,4 @@
 homeassistant==2025.3.0
 async-timeout
 aiohttp
-pymodbus
+pymodbus==3.8.6
