@@ -7,6 +7,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from .devices import EctoCH10BinarySensor, EctoRelay8CH,EctoTemperatureSensor
 from .const import DOMAIN, DEFAULT_BAUDRATE, DEVICE_TYPES
+from homeassistant.helpers.discovery import load_platform
+
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -85,7 +87,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         "context": context
     }
 
-    hass.helpers.discovery.load_platform("switch", DOMAIN, {}, config)
+    load_platform("switch", DOMAIN, {}, config)
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
