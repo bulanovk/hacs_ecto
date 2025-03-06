@@ -71,7 +71,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         devices.append(device)
 
     context = ModbusServerContext(slaves=slaves, single=False)
-
+    _LOGGER.warning("Going to init Modbus")
     await StartAsyncSerialServer(
         context,
         port=conf["port"],
@@ -81,6 +81,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         bytesize=8,
         broadcast_enable=True
     )
+    _LOGGER.warning("Modbus Init Done")
 
     hass.data[DOMAIN] = {
         "devices": devices,
