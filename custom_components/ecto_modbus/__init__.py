@@ -72,7 +72,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     context = ModbusServerContext(slaves=slaves, single=False)
     _LOGGER.warning("Going to init Modbus")
-    await StartAsyncSerialServer(
+    await hass.async_add_job(
+     StartAsyncSerialServer(
         context,
         port=conf["port"],
         baudrate=DEFAULT_BAUDRATE,
@@ -80,6 +81,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         stopbits=1,
         bytesize=8,
         broadcast_enable=True
+    )
     )
     _LOGGER.warning("Modbus Init Done")
 
