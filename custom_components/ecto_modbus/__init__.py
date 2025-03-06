@@ -1,6 +1,6 @@
 import logging
 import voluptuous as vol
-from pymodbus.server import StartAsyncSerialServer
+from pymodbus.server import ModbusSerialServer
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.datastore import ModbusSequentialDataBlock
 from homeassistant.core import HomeAssistant
@@ -72,8 +72,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     context = ModbusServerContext(slaves=slaves, single=False)
     _LOGGER.warning("Going to init Modbus")
-    await hass.async_add_job(
-     StartAsyncSerialServer(
+    svr: ModbusSerialServer =ModbusSerialServer(
         context,
         port=conf["port"],
         baudrate=DEFAULT_BAUDRATE,
@@ -82,7 +81,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         bytesize=8,
         broadcast_enable=True
     )
-    )
+    await svr.serve_forever(background=True)
     _LOGGER.warning("Modbus Init Done")
 
     hass.data[DOMAIN] = {
@@ -132,7 +131,7 @@ async def setup_modbus_server(hass, config, devices):
     context = ModbusServerContext(slaves=slaves, single=False)
 
     try:
-        await StartAsyncSerialServer(
+        svr: ModbusSerialServer = ModbusSerialServer(
             context,
             port=config['port'],
             baudrate=DEFAULT_BAUDRATE,
@@ -141,6 +140,7 @@ async def setup_modbus_server(hass, config, devices):
             bytesize=8,
             broadcast_enable=True
         )
+        await svr.serve_forever(background=True)
     except Exception as e:
         _LOGGER.error("Failed to start Modbus server: %s", e)
         return False
