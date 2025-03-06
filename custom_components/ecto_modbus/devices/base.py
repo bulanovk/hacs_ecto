@@ -2,7 +2,7 @@ import struct
 
 class EctoDevice:
     """Базовый класс для всех устройств Ectocontrol"""
-    STRUCT_FORMAT = ">B3BxB2B"
+    STRUCT_FORMAT = ">BBBBBBBB"
     DEVICE_TYPE = 0x00
     CHANNEL_COUNT = 0
     UID_BASE = 0x800000
@@ -12,8 +12,11 @@ class EctoDevice:
         self.addr = config['addr']
         self.uid = self.UID_BASE + (self.addr - 3)
         self._init_registers()
+        self.input_registers=[0,0]
 
     def _init_registers(self):
+        # reg = ModBusRegisterSensor(self.slave, cst.HOLDING_REGISTERS, 0, 4)
+        # reg.set_raw_value([0x80, slave_id - 3, slave_id, dev_type])
         device_bytes = struct.pack(
             self.STRUCT_FORMAT,
             0x00,
@@ -29,8 +32,4 @@ class EctoDevice:
             (device_bytes[i] << 8) | device_bytes[i+1]
             for i in range(0, 8, 2)
         ]
-        self.input_registers = [0x0000] * self._register_count()
 
-    @property
-    def _register_count(self):
-        return (self.CHANNEL_COUNT + 15) // 16
