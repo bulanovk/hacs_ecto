@@ -130,7 +130,7 @@ async def setup_modbus_server(hass, config, devices):
         await StartAsyncSerialServer(
             context,
             port=config['port'],
-            baudrate=BAUDRATE,
+            baudrate=DEFAULT_BAUDRATE,
             parity="N",
             stopbits=1,
             bytesize=8,
