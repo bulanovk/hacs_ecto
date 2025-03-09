@@ -2,8 +2,8 @@
   "domain": "ecto_modbus",
   "name": "Ectocontrol Modbus Devices",
   "version": "1.0.0",
-  "documentation": "https://github.com/your_name/ecto_modbus",
-  "requirements": ["pymodbus>=3.8.6"],
+  "documentation": "https://github.com/bulanovk/ecto_modbus",
+  "requirements": ["modbus-tk"],
   "codeowners": ["@bulanovk"],
   "config_flow": false,
   "iot_class": "local"

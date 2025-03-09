@@ -1,6 +1,5 @@
 homeassistant==2025.3.0
 async-timeout
 aiohttp
-pymodbus==3.8.6
 pyserial
 modbus-tk
