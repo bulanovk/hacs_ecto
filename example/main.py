@@ -93,7 +93,7 @@ def setup_server(description=None, context=None, cmdline=None):
             # full address range::
             datablock = lambda : ModbusSequentialDataBlock.create()  # pylint: disable=unnecessary-lambda-assignment,unnecessary-lambda
 
-        if args.slaves > 1:
+
             # The server then makes use of a server context that allows the server
             # to respond with different slave contexts for different slave ids.
             # By default it will return the same context for every slave id supplied
@@ -102,20 +102,13 @@ def setup_server(description=None, context=None, cmdline=None):
             # then supplying a dictionary of slave id to context mapping::
             context = {}
 
-            for slave in range(args.slaves):
-                context[slave] = ModbusSlaveContext(
+            context[8] = ModbusSlaveContext(
                     di=datablock(),
                     co=datablock(),
                     hr=datablock(),
                     ir=datablock(),
                 )
-
             single = False
-        else:
-            context = ModbusSlaveContext(
-                di=datablock(), co=datablock(), hr=datablock(), ir=datablock()
-            )
-            single = True
 
         # Build data storage
         args.context = ModbusServerContext(slaves=context, single=single)
