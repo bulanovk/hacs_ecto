@@ -12,7 +12,7 @@ class EctoDevice:
         self.addr = config['addr']
         self.uid = self.UID_BASE + (self.addr - 3)
         self._init_registers()
-        self.input_registers=[0,0]
+        self.input_registers = [0, 0, 0, 0]
 
     def _init_registers(self):
         # reg = ModBusRegisterSensor(self.slave, cst.HOLDING_REGISTERS, 0, 4)
