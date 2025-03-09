@@ -108,10 +108,8 @@ def setup_server(description=None, context=None, cmdline=None):
                     hr=datablock(),
                     ir=datablock(),
                 )
-            single = False
-
         # Build data storage
-        args.context = ModbusServerContext(slaves=context, single=single)
+        args.context = ModbusServerContext(slaves=context, single=False)
 
     # ----------------------------------------------------------------------- #
     # initialize the server information
