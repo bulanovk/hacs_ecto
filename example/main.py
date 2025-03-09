@@ -156,9 +156,7 @@ async def run_async_server(args) -> None:
             # timeout=1,  # waiting time for request to complete
         )
         await svr.serve_forever(background=True)
-        print("1")
         await svr.serving
-        print("2")
     elif args.comm == "udp":
         address = (
             args.host if args.host else "127.0.0.1",
@@ -184,12 +182,12 @@ async def run_async_server(args) -> None:
             port=args.port,  # serial port
             # custom_functions=[],  # allow custom handling
             framer=args.framer,  # The framer strategy to use
-            # stopbits=1,  # The number of stop bits to use
-            # bytesize=8,  # The bytesize of the serial messages
-            # parity="N",  # Which kind of parity to use
+            stopbits=1,  # The number of stop bits to use
+            bytesize=8,  # The bytesize of the serial messages
+            parity="N",  # Which kind of parity to use
             baudrate=args.baudrate,  # The baud rate to use for the serial device
             # handle_local_echo=False,  # Handle local echo of the USB-to-RS485 adaptor
-            # ignore_missing_slaves=True,  # ignore request to a missing slave
+            ignore_missing_slaves=True,  # ignore request to a missing slave
             # broadcast_enable=False,  # treat slave 0 as broadcast address,
         )
     elif args.comm == "tls":
