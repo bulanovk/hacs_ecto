@@ -8,7 +8,8 @@ from homeassistant.helpers import config_validation as cv
 from .devices import EctoCH10BinarySensor, EctoRelay8CH,EctoTemperatureSensor
 from .const import DOMAIN, DEFAULT_BAUDRATE, DEVICE_TYPES
 from homeassistant.helpers.discovery import load_platform
-
+from modbus_tk import modbus_rtu
+from serial import rs485
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -52,41 +53,26 @@ CONFIG_SCHEMA = vol.Schema({
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     conf = config[DOMAIN]
-    slaves = {}
     devices = []
+
+    port485_main = rs485.RS485(config['port'], baudrate=19200, inter_byte_timeout=0.002)
+    server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1)
+    server19200.start()
 
     for device_conf in conf["devices"]:
         device_class = DEVICE_CLASSES[device_conf["type"]]
-        device = device_class(device_conf)
+        device = device_class(device_conf, server19200)
 
         if hasattr(device, 'async_init'):
             await device.async_init(hass)
 
-        store = ModbusSlaveContext(
-            hr=ModbusSequentialDataBlock(0x00, device.holding_registers),
-            ir=ModbusSequentialDataBlock(0x10, device.input_registers)
-        )
-
-        slaves[device.addr] = store
         devices.append(device)
 
-    context = ModbusServerContext(slaves=slaves, single=False)
     _LOGGER.warning("Going to init Modbus")
-    svr: ModbusSerialServer =ModbusSerialServer(
-        context,
-        port=conf["port"],
-        baudrate=DEFAULT_BAUDRATE,
-        parity="N",
-        stopbits=1,
-        bytesize=8,
-        broadcast_enable=True
-    )
-    await svr.serve_forever(background=True)
-    _LOGGER.warning("Modbus Init Done")
 
     hass.data[DOMAIN] = {
         "devices": devices,
-        "context": context
+        "rtu": server19200
     }
 
     load_platform(hass, "switch", DOMAIN, {}, config)

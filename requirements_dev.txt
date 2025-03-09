@@ -3,3 +3,4 @@ async-timeout
 aiohttp
 pymodbus==3.8.6
 pyserial
+modbus-tk
