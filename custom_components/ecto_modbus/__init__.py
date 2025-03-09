@@ -53,7 +53,7 @@ CONFIG_SCHEMA = vol.Schema({
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     conf = config[DOMAIN]
-    devices = []
+    ecto_devices = []
 
     port485_main = rs485.RS485(config['port'], baudrate=19200, inter_byte_timeout=0.002)
     server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1)
@@ -66,12 +66,12 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         if hasattr(device, 'async_init'):
             await device.async_init(hass)
 
-        devices.append(device)
+        ecto_devices.append(device)
 
     _LOGGER.warning("Going to init Modbus")
 
     hass.data[DOMAIN] = {
-        "devices": devices,
+        "devices": ecto_devices,
         "rtu": server19200
     }
 
@@ -81,7 +81,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     """Настройка через UI"""
     config = entry.data
-    devices = []
+    ecto_devices = []
 
     # Инициализация устройств
     for device_conf in config.get('devices', []):
@@ -95,19 +95,19 @@ async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
         if hasattr(device, 'setup'):
             await device.setup(hass)
 
-        devices.append(device)
+        ecto_devices.append(device)
 
     # Запуск Modbus сервера
-    await setup_modbus_server(hass, config, devices)
+    await setup_modbus_server(hass, config, ecto_devices)
 
     # Регистрация платформ
     await hass.config_entries.async_forward_entry_setups(entry, "switch")
     return True
 
-async def setup_modbus_server(hass, config, devices):
+async def setup_modbus_server(hass, config, ecto_devices):
     """Настройка Modbus сервера"""
     slaves = {}
-    for device in devices:
+    for device in ecto_devices:
         store = ModbusSlaveContext(
             hr=ModbusSequentialDataBlock(0x00, device.holding_registers),
             ir=ModbusSequentialDataBlock(0x10, device.input_registers)
@@ -133,7 +133,7 @@ async def setup_modbus_server(hass, config, devices):
 
     hass.data.setdefault(DOMAIN, {})[config['port']] = {
         'context': context,
-        'devices': devices
+        'devices': ecto_devices
     }
 
 async def async_unload_entry(hass: HomeAssistant, entry) -> bool:

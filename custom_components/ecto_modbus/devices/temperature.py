@@ -1,9 +1,13 @@
 # custom_components/ecto/devices/temperature.py
+import logging
+
 from homeassistant.helpers.event import async_track_state_change
 from .base import EctoDevice
 import modbus_tk.defines as cst
 from ..transport.modBusRTU import ModBusRegisterSensor
 from modbus_tk.modbus_rtu import RtuServer
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class EctoTemperatureSensor(EctoDevice):
