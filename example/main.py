@@ -34,6 +34,8 @@ The corresponding client can be started as:
 """
 import asyncio
 import logging
+from pymodbus.constants import Endian
+from pymodbus.payload import BinaryPayloadBuilder
 import sys
 from collections.abc import Callable
 from typing import Any
@@ -77,32 +79,11 @@ def setup_server(description=None, context=None, cmdline=None):
     datablock: Callable[[], Any]
     if not args.context:
         _logger.info("### Create datastore")
-        # The datastores only respond to the addresses that are initialized
-        # If you initialize a DataBlock to addresses of 0x00 to 0xFF, a request to
-        # 0x100 will respond with an invalid address exception.
-        # This is because many devices exhibit this kind of behavior (but not all)
-        if args.store == "sequential":
-            # Continuing, use a sequential block without gaps.
-            datablock = lambda : ModbusSequentialDataBlock(0x00, [17] * 100)  # pylint: disable=unnecessary-lambda-assignment
-        elif args.store == "sparse":
-            # Continuing, or use a sparse DataBlock which can have gaps
-            datablock = lambda : ModbusSparseDataBlock({0x00: 0, 0x05: 1})  # pylint: disable=unnecessary-lambda-assignment
-        elif args.store == "factory":
-            # Alternately, use the factory methods to initialize the DataBlocks
-            # or simply do not pass them to have them initialized to 0x00 on the
-            # full address range::
-            datablock = lambda : ModbusSequentialDataBlock.create()  # pylint: disable=unnecessary-lambda-assignment,unnecessary-lambda
-
-
-            # The server then makes use of a server context that allows the server
-            # to respond with different slave contexts for different slave ids.
-            # By default it will return the same context for every slave id supplied
-            # (broadcast mode).
-            # However, this can be overloaded by setting the single flag to False and
-            # then supplying a dictionary of slave id to context mapping::
-            context = {}
-
-            context[8] = ModbusSlaveContext(
+        builder = BinaryPayloadBuilder(byteorder=Endian.BIG, wordorder=Endian.BIG)
+        builder.add_16bit_int(9999)
+        datablock = lambda : ModbusSparseDataBlock({0x00: 0, 0x20: builder.to_registers()})  # pylint: disable=unnecessary-lambda-assignment
+        context = {}
+        context[8] = ModbusSlaveContext(
                     di=datablock(),
                     co=datablock(),
                     hr=datablock(),
