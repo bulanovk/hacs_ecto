@@ -1,6 +1,7 @@
 import logging
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -12,6 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class EctoChannelSwitch(SwitchEntity, RestoreEntity):
     def __init__(self, device, channel):
+        super().__init__()
         self._device: EctoCH10BinarySensor = device
         self._channel = channel
         self._state = False
@@ -53,6 +55,13 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
             model="1.1.1",
             manufacturer="Ectostroy"
         )
+
+    async def async_internal_added_to_hass(self) -> None:
+        """Call when the button is added to hass."""
+        await super().async_internal_added_to_hass()
+        state = await self.async_get_last_state()
+        if state is not None and state.state not in (STATE_UNAVAILABLE, None):
+            self._update_state(state.state)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info):
