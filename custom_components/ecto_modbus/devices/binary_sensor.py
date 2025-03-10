@@ -1,7 +1,11 @@
+import logging
+
 from .base import EctoDevice
 import modbus_tk.defines as cst
 from ..transport.modBusRTU import ModBusRegisterSensor
 from modbus_tk.modbus_rtu import RtuServer
+
+LOGGER = logging.getLogger(__name__)
 
 
 class EctoCH10BinarySensor(EctoDevice):
@@ -18,7 +22,7 @@ class EctoCH10BinarySensor(EctoDevice):
     def set_switch_state(self, num, state):
         # with self.lock:
         if state != self.switch[num]:
-            print("Toggle switch " + str(num + 1) + " to " + str(state))
+            LOGGER.warning("Toggle switch " + str(num + 1) + " to " + str(state))
             value = 0
             state_value = 0
             if state:

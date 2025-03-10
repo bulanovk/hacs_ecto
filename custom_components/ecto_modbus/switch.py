@@ -1,6 +1,12 @@
+import logging
+
 from homeassistant.components.switch import SwitchEntity
+from modbus_tk import LOGGER
+
 from . import DOMAIN
 from .devices.binary_sensor import EctoCH10BinarySensor
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class EctoChannelSwitch(SwitchEntity):
@@ -17,7 +23,7 @@ class EctoChannelSwitch(SwitchEntity):
 
     @property
     def name(self):
-        return f"Device {self._device.addr} Ch.{self._channel+1}"
+        return f"Device {self._device.addr} Ch.{self._channel + 1}"
 
     @property
     def is_on(self):
@@ -30,10 +36,11 @@ class EctoChannelSwitch(SwitchEntity):
         self._update_state(False)
 
     def _update_state(self, state):
+        LOGGER.warning("Switch channel %s to state %s", self._channel, state)
         if state:
-            self._device.set_switch_state(1, self._register_index)
+            self._device.set_switch_state(1, self._channel)
         else:
-            self._device.set_switch_state(0, self._register_index)
+            self._device.set_switch_state(0, self._channel)
         self._state = state
         self.async_write_ha_state()
 
