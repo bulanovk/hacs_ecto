@@ -1,7 +1,6 @@
 import logging
 
 from homeassistant.components.switch import SwitchEntity
-from modbus_tk import LOGGER
 
 from . import DOMAIN
 from .devices.binary_sensor import EctoCH10BinarySensor
@@ -36,7 +35,7 @@ class EctoChannelSwitch(SwitchEntity):
         self._update_state(False)
 
     def _update_state(self, state):
-        LOGGER.warning("Switch channel %s to state %s", self._channel, state)
+        _LOGGER.warning("Switch channel %s to state %s", self._channel, state)
         if state:
             self._device.set_switch_state(1, self._channel)
         else:
