@@ -57,9 +57,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     conf = config[DOMAIN]
     ecto_devices = []
 
-    logger = utils.create_logger(name="dummy",level=logging.ERROR, record_format="%(message)s")
-    logger.handlers.clear()
-    logger = utils.create_logger(name="dummy", level=logging.ERROR, record_format="%(message)s")
+    logger = utils.create_logger(name="dummy",level=logging.CRITICAL, record_format="%(message)s")
 
     port485_main = rs485.RS485(conf.get("port"), baudrate=19200, inter_byte_timeout=0.002)
     server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1, error_on_missing_slave=False)
