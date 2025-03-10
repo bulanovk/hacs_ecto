@@ -1,6 +1,8 @@
 import logging
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import DOMAIN
 from .devices.binary_sensor import EctoCH10BinarySensor
@@ -8,7 +10,7 @@ from .devices.binary_sensor import EctoCH10BinarySensor
 _LOGGER = logging.getLogger(__name__)
 
 
-class EctoChannelSwitch(SwitchEntity):
+class EctoChannelSwitch(SwitchEntity, RestoreEntity):
     def __init__(self, device, channel):
         self._device: EctoCH10BinarySensor = device
         self._channel = channel
@@ -44,14 +46,13 @@ class EctoChannelSwitch(SwitchEntity):
         self.async_schedule_update_ha_state()
 
     @property
-    def device_info(self):
-        return {
-            "identifiers": {(DOMAIN, "local_ecto_unit")},
-            "name": "Ecto Unit",
-            "model": "1.1.1",
-            "manufacturer": "Ectostroy",
-        }
-
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, "local_ecto_unit")},
+            name="Ecto Unit",
+            model="1.1.1",
+            manufacturer="Ectostroy"
+        )
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info):
