@@ -55,7 +55,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     conf = config[DOMAIN]
     ecto_devices = []
 
-    port485_main = rs485.RS485(config['port'], baudrate=19200, inter_byte_timeout=0.002)
+    port485_main = rs485.RS485(conf.get("port"), baudrate=19200, inter_byte_timeout=0.002)
     server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1)
     server19200.start()
 
