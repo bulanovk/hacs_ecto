@@ -1,7 +1,7 @@
 import logging
 
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.const import STATE_UNAVAILABLE, STATE_ON
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -61,7 +61,10 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
         await super().async_internal_added_to_hass()
         state = await self.async_get_last_state()
         if state is not None and state.state not in (STATE_UNAVAILABLE, None):
-            self._update_state(state.state)
+            if state.state == STATE_ON:
+                self._update_state(True)
+            else:
+                self._update_state(False)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info):
