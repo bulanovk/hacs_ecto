@@ -12,7 +12,7 @@ from .const import DOMAIN, DEFAULT_BAUDRATE, DEVICE_TYPES
 from homeassistant.helpers.discovery import load_platform
 from modbus_tk import modbus_rtu
 from serial import rs485
-
+from modbus_tk import utils
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ CONFIG_SCHEMA = vol.Schema({
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     conf = config[DOMAIN]
     ecto_devices = []
-    logger = modbus_tk.utils.create_logger(name="dummy", record_format="%(message)s")
+    logger = utils.create_logger(name="dummy",level=logging.ERROR, record_format="%(message)s")
 
     port485_main = rs485.RS485(conf.get("port"), baudrate=19200, inter_byte_timeout=0.002)
     server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1)
