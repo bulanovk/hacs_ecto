@@ -12,8 +12,6 @@ class EctoChannelSwitch(SwitchEntity):
     def __init__(self, device, channel):
         self._device: EctoCH10BinarySensor = device
         self._channel = channel
-        self._register_index = channel // 16
-        self._bitmask = 1 << (channel % 16)
         self._state = False
 
     @property
@@ -29,9 +27,11 @@ class EctoChannelSwitch(SwitchEntity):
         return self._state
 
     async def async_turn_on(self, **kwargs):
+        _LOGGER.warning("Turn on Channel %s", str(self._channel))
         self._update_state(True)
 
     async def async_turn_off(self, **kwargs):
+        _LOGGER.warning("Turn off Channel %s", str(self._channel))
         self._update_state(False)
 
     def _update_state(self, state):
@@ -41,7 +41,7 @@ class EctoChannelSwitch(SwitchEntity):
         else:
             self._device.set_switch_state(self._channel, 0)
         self._state = state
-        self.async_write_ha_state()
+        self.async_schedule_update_ha_state()
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info):
