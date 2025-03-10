@@ -35,11 +35,11 @@ class EctoChannelSwitch(SwitchEntity):
         self._update_state(False)
 
     def _update_state(self, state):
-        _LOGGER.warning("Switch channel %s to state %s", self._channel, state)
+        _LOGGER.warning("Switch channel %s to state %s", str(self._channel), str(state))
         if state:
-            self._device.set_switch_state(1, self._channel)
+            self._device.set_switch_state(self._channel, 1)
         else:
-            self._device.set_switch_state(0, self._channel)
+            self._device.set_switch_state(self._channel, 0)
         self._state = state
         self.async_write_ha_state()
 
