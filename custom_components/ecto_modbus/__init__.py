@@ -59,7 +59,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     logger = utils.create_logger(name="dummy",level=logging.ERROR, record_format="%(message)s")
 
     port485_main = rs485.RS485(conf.get("port"), baudrate=19200, inter_byte_timeout=0.002)
-    server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1)
+    server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1, error_on_missing_slave=False)
     server19200.start()
 
     for device_conf in conf["devices"]:
