@@ -43,6 +43,16 @@ class EctoChannelSwitch(SwitchEntity):
         self._state = state
         self.async_schedule_update_ha_state()
 
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, "local_ecto_unit")},
+            "name": "Ecto Unit",
+            "model": "1.1.1",
+            "manufacturer": "Ectostroy",
+        }
+
+
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info):
     devices = hass.data[DOMAIN]["devices"]
