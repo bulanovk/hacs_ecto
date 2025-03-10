@@ -23,7 +23,7 @@ class EctoCH10BinarySensor(EctoDevice):
         # with self.lock:
         num = 7 - num
         if state != self.switch[num]:
-            _LOGGER.warning("Toggle switch " + str(num + 1) + " to " + str(state))
+            _LOGGER.debug("Toggle switch " + str(num + 1) + " to " + str(state))
             value = 0
             state_value = 0
             if state:

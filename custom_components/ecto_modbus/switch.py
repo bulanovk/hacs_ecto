@@ -31,15 +31,15 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
         return self._state
 
     async def async_turn_on(self, **kwargs):
-        _LOGGER.warning("Turn on Channel %s", str(self._channel))
+        _LOGGER.debug("Turn on Channel %s", str(self._channel))
         self._update_state(True)
 
     async def async_turn_off(self, **kwargs):
-        _LOGGER.warning("Turn off Channel %s", str(self._channel))
+        _LOGGER.debug("Turn off Channel %s", str(self._channel))
         self._update_state(False)
 
     def _update_state(self, state):
-        _LOGGER.warning("Switch channel %s to state %s", str(self._channel), str(state))
+        _LOGGER.debug("Switch channel %s to state %s", str(self._channel), str(state))
         if state:
             self._device.set_switch_state(self._channel, 1)
         else:
