@@ -35,7 +35,6 @@ class EctoTemperatureSensor(EctoDevice):
         """Обработчик изменения состояния сенсора"""
         try:
             temp = float(new_state.state)
-            print("Set Temrature to: "+str(int(temp * 10)))
             self.registers[0x20].set_raw_value([int(temp * 10)])
         except (ValueError, AttributeError) as e:
             _LOGGER.error(f"Error updating temperature: {e}")
