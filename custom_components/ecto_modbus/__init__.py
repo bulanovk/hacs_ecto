@@ -10,7 +10,7 @@ from homeassistant.helpers import config_validation as cv
 from .devices import EctoCH10BinarySensor, EctoRelay8CH,EctoTemperatureSensor
 from .const import DOMAIN, DEFAULT_BAUDRATE, DEVICE_TYPES
 from homeassistant.helpers.discovery import load_platform
-from modbus_tk import modbus_rtu
+from modbus_tk import modbus_rtu, hooks
 from serial import rs485
 from modbus_tk import utils
 
@@ -53,11 +53,12 @@ CONFIG_SCHEMA = vol.Schema({
     })
 }, extra=vol.ALLOW_EXTRA)
 
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     conf = config[DOMAIN]
     ecto_devices = []
 
-    logger = utils.create_logger(name="dummy",level=logging.CRITICAL, record_format="%(message)s")
+    logger = utils.create_logger(name="dummy",level=logging.DEBUG, record_format="%(message)s")
 
     port485_main = rs485.RS485(conf.get("port"), baudrate=19200, inter_byte_timeout=0.002)
     server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1, error_on_missing_slave=False)

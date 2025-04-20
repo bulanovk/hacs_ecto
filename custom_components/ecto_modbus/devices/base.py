@@ -15,5 +15,5 @@ class EctoDevice:
         self.slave = server.add_slave(self.addr)
         self.uid = self.UID_BASE + (self.addr - 3)
         reg = ModBusRegisterSensor(self.slave, cst.HOLDING_REGISTERS, 0, 4)
-        reg.set_raw_value([0x80, self.uid, self.addr, self.DEVICE_TYPE])
+        reg.set_raw_value([0x80, (self.addr - 3), self.addr, self.DEVICE_TYPE])
         self.registers = {0: reg}
