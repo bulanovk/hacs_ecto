@@ -2,9 +2,9 @@ import logging
 
 import modbus_tk
 import voluptuous as vol
-from pymodbus.server import ModbusSerialServer
-from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
-from pymodbus.datastore import ModbusSequentialDataBlock
+# from pymodbus.server import ModbusSerialServer
+# from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
+# from pymodbus.datastore import ModbusSequentialDataBlock
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from .devices import EctoCH10BinarySensor, EctoRelay8CH,EctoTemperatureSensor
@@ -83,63 +83,63 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     load_platform(hass, "switch", DOMAIN, {}, config)
     return True
 
-async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
-    """Настройка через UI"""
-    config = entry.data
-    ecto_devices = []
+# async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
+#     """Настройка через UI"""
+#     config = entry.data
+#     ecto_devices = []
 
-    # Инициализация устройств
-    for device_conf in config.get('devices', []):
-        device_type = device_conf['type']
-        if device_type not in DEVICE_CLASSES:
-            continue
+#     # Инициализация устройств
+#     for device_conf in config.get('devices', []):
+#         device_type = device_conf['type']
+#         if device_type not in DEVICE_CLASSES:
+#             continue
 
-        device_class = DEVICE_CLASSES[device_type]
-        device = device_class(device_conf)
+#         device_class = DEVICE_CLASSES[device_type]
+#         device = device_class(device_conf)
 
-        if hasattr(device, 'setup'):
-            await device.setup(hass)
+#         if hasattr(device, 'setup'):
+#             await device.setup(hass)
 
-        ecto_devices.append(device)
+#         ecto_devices.append(device)
 
-    # Запуск Modbus сервера
-    await setup_modbus_server(hass, config, ecto_devices)
+#     # Запуск Modbus сервера
+#     await setup_modbus_server(hass, config, ecto_devices)
 
-    # Регистрация платформ
-    await hass.config_entries.async_forward_entry_setups(entry, "switch")
-    return True
+#     # Регистрация платформ
+#     await hass.config_entries.async_forward_entry_setups(entry, "switch")
+#     return True
 
-async def setup_modbus_server(hass, config, ecto_devices):
-    """Настройка Modbus сервера"""
-    slaves = {}
-    for device in ecto_devices:
-        store = ModbusSlaveContext(
-            hr=ModbusSequentialDataBlock(0x00, device.holding_registers),
-            ir=ModbusSequentialDataBlock(0x10, device.input_registers)
-        )
-        slaves[device.addr] = store
+# async def setup_modbus_server(hass, config, ecto_devices):
+#     """Настройка Modbus сервера"""
+#     slaves = {}
+#     for device in ecto_devices:
+#         store = ModbusSlaveContext(
+#             hr=ModbusSequentialDataBlock(0x00, device.holding_registers),
+#             ir=ModbusSequentialDataBlock(0x10, device.input_registers)
+#         )
+#         slaves[device.addr] = store
 
-    context = ModbusServerContext(slaves=slaves, single=False)
+#     context = ModbusServerContext(slaves=slaves, single=False)
 
-    try:
-        svr: ModbusSerialServer = ModbusSerialServer(
-            context,
-            port=config['port'],
-            baudrate=DEFAULT_BAUDRATE,
-            parity="N",
-            stopbits=1,
-            bytesize=8,
-            broadcast_enable=True
-        )
-        await svr.serve_forever(background=True)
-    except Exception as e:
-        _LOGGER.error("Failed to start Modbus server: %s", e)
-        return False
+#     try:
+#         svr: ModbusSerialServer = ModbusSerialServer(
+#             context,
+#             port=config['port'],
+#             baudrate=DEFAULT_BAUDRATE,
+#             parity="N",
+#             stopbits=1,
+#             bytesize=8,
+#             broadcast_enable=True
+#         )
+#         await svr.serve_forever(background=True)
+#     except Exception as e:
+#         _LOGGER.error("Failed to start Modbus server: %s", e)
+#         return False
 
-    hass.data.setdefault(DOMAIN, {})[config['port']] = {
-        'context': context,
-        'devices': ecto_devices
-    }
+#     hass.data.setdefault(DOMAIN, {})[config['port']] = {
+#         'context': context,
+#         'devices': ecto_devices
+#     }
 
 async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
     """Выгрузка конфигурации"""
