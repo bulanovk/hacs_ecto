@@ -60,7 +60,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     ecto_devices = []
 
     _LOGGER.debug("Creating dummy logger for modbus_tk")
-    logger = utils.create_logger(name="dummy",level=logging.CRITICAL, record_format="%(message)s")
+    logger = utils.create_logger(name="dummy",level=logging.DEBUG, record_format="%(message)s")
 
     port = conf.get("port")
     _LOGGER.debug("Configuring RS485 port: %s", port)
