@@ -6,3 +6,8 @@ DEVICE_TYPES = [
     "relay_8ch",
     "temperature_sensor"
 ]
+
+PORT_TYPE_SERIAL = "serial"
+PORT_TYPE_RS485 = "rs485"
+DEFAULT_PORT_TYPE = PORT_TYPE_RS485
+PORT_TYPES = [PORT_TYPE_SERIAL, PORT_TYPE_RS485]

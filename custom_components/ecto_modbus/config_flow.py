@@ -2,7 +2,13 @@
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 import voluptuous as vol
-from .const import DOMAIN, DEFAULT_BAUDRATE, DEVICE_TYPES
+from .const import (
+    DOMAIN,
+    DEFAULT_BAUDRATE,
+    DEVICE_TYPES,
+    DEFAULT_PORT_TYPE,
+    PORT_TYPES
+)
 
 class EctoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
@@ -22,7 +28,8 @@ class EctoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required("port"): str,
-                vol.Optional("baudrate", default=DEFAULT_BAUDRATE): int
+                vol.Optional("baudrate", default=DEFAULT_BAUDRATE): int,
+                vol.Optional("port_type", default=DEFAULT_PORT_TYPE): vol.In(PORT_TYPES)
             })
         )
 
