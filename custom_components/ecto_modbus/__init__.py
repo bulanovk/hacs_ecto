@@ -8,7 +8,13 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from .devices import EctoCH10BinarySensor, EctoRelay8CH,EctoTemperatureSensor
-from .const import DOMAIN, DEFAULT_BAUDRATE, DEVICE_TYPES
+from .const import (
+    DOMAIN,
+    DEFAULT_BAUDRATE,
+    DEVICE_TYPES,
+    PORT_TYPE_SERIAL,
+    PORT_TYPE_RS485
+)
 from homeassistant.helpers.discovery import load_platform
 from modbus_tk import modbus_rtu, hooks
 from serial import rs485
@@ -26,6 +32,11 @@ DEVICE_CLASSES = {
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
         vol.Required("port"): str,
+        vol.Optional("port_type", default=PORT_TYPE_RS485): vol.In({
+            PORT_TYPE_SERIAL,
+            PORT_TYPE_RS485
+        }),
+        vol.Optional("baudrate", default=DEFAULT_BAUDRATE): cv.positive_int,
         vol.Required("devices"): vol.All(
             cv.ensure_list,
             [
@@ -63,9 +74,18 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     logger = utils.create_logger(name="dummy",level=logging.DEBUG, record_format="%(message)s")
 
     port = conf.get("port")
-    _LOGGER.debug("Configuring RS485 port: %s", port)
-    port485_main = rs485.RS485(port, baudrate=19200, inter_byte_timeout=0.002)
-    _LOGGER.info("RS485 port configured: %s, baudrate=19200", port)
+    port_type = conf.get("port_type", PORT_TYPE_RS485)
+    baudrate = conf.get("baudrate", DEFAULT_BAUDRATE)
+
+    _LOGGER.debug("Configuring %s port: %s", port_type, port)
+
+    if port_type == PORT_TYPE_RS485:
+        port485_main = rs485.RS485(port, baudrate=baudrate, inter_byte_timeout=0.002)
+        _LOGGER.info("RS485 port configured: %s, baudrate=%d", port, baudrate)
+    else:
+        import serial
+        port485_main = serial.Serial(port, baudrate=baudrate, timeout=0.002)
+        _LOGGER.info("Serial port configured: %s, baudrate=%d", port, baudrate)
 
     _LOGGER.debug("Creating Modbus RTU server")
     server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1, error_on_missing_slave=False)

@@ -1,7 +1,7 @@
 {
   "domain": "ecto_modbus",
   "name": "Ectocontrol Modbus Devices",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "documentation": "https://github.com/bulanovk/ecto_modbus",
   "requirements": ["modbus-tk"],
   "codeowners": ["@bulanovk"],

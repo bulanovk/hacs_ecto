@@ -1,4 +1,6 @@
 # custom_components/ecto/config_flow.py
+# This component uses YAML configuration, not config flow
+# This file is kept for potential future use
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 import voluptuous as vol
