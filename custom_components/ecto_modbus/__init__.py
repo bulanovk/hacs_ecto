@@ -55,32 +55,52 @@ CONFIG_SCHEMA = vol.Schema({
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    _LOGGER.info("Setting up Ecto Modbus integration")
     conf = config[DOMAIN]
     ecto_devices = []
 
+    _LOGGER.debug("Creating dummy logger for modbus_tk")
     logger = utils.create_logger(name="dummy",level=logging.CRITICAL, record_format="%(message)s")
 
-    port485_main = rs485.RS485(conf.get("port"), baudrate=19200, inter_byte_timeout=0.002)
+    port = conf.get("port")
+    _LOGGER.debug("Configuring RS485 port: %s", port)
+    port485_main = rs485.RS485(port, baudrate=19200, inter_byte_timeout=0.002)
+    _LOGGER.info("RS485 port configured: %s, baudrate=19200", port)
+
+    _LOGGER.debug("Creating Modbus RTU server")
     server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1, error_on_missing_slave=False)
     server19200.start()
+    _LOGGER.info("Modbus RTU server started on port %s", port)
 
-    for device_conf in conf["devices"]:
-        device_class = DEVICE_CLASSES[device_conf["type"]]
+    device_count = len(conf["devices"])
+    _LOGGER.info("Initializing %d device(s)", device_count)
+
+    for idx, device_conf in enumerate(conf["devices"]):
+        device_type = device_conf["type"]
+        device_addr = device_conf["addr"]
+        _LOGGER.debug("Creating device %d/%d: type=%s, addr=%s",
+                     idx + 1, device_count, device_type, device_addr)
+        device_class = DEVICE_CLASSES[device_type]
         device = device_class(device_conf, server19200)
 
         if hasattr(device, 'async_init'):
+            _LOGGER.debug("Calling async_init for device: addr=%s", device_addr)
             await device.async_init(hass)
 
         ecto_devices.append(device)
+        _LOGGER.debug("Device added to list: addr=%s", device_addr)
 
-    _LOGGER.warning("Going to init Modbus")
+    _LOGGER.info("All devices initialized: total=%d", len(ecto_devices))
+    _LOGGER.debug("Storing devices and server in hass.data")
 
     hass.data[DOMAIN] = {
         "devices": ecto_devices,
         "rtu": server19200
     }
 
+    _LOGGER.debug("Loading switch platform")
     load_platform(hass, "switch", DOMAIN, {}, config)
+    _LOGGER.info("Ecto Modbus integration setup completed")
     return True
 
 # async def async_setup_entry(hass: HomeAssistant, entry) -> bool:

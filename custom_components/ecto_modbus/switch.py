@@ -17,6 +17,8 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
         self._device: EctoCH10BinarySensor = device
         self._channel = channel
         self._state = False
+        _LOGGER.debug("EctoChannelSwitch created: device_addr=%s, channel=%s",
+                     self._device.addr, self._channel)
 
     @property
     def unique_id(self):
@@ -31,21 +33,30 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
         return self._state
 
     async def async_turn_on(self, **kwargs):
-        _LOGGER.debug("Turn on Channel %s", str(self._channel))
+        _LOGGER.info("Turning ON channel %s for device %s",
+                    self._channel, self._device.addr)
+        _LOGGER.debug("async_turn_on called: device_addr=%s, channel=%s, kwargs=%s",
+                     self._device.addr, self._channel, kwargs)
         self._update_state(True)
 
     async def async_turn_off(self, **kwargs):
-        _LOGGER.debug("Turn off Channel %s", str(self._channel))
+        _LOGGER.info("Turning OFF channel %s for device %s",
+                    self._channel, self._device.addr)
+        _LOGGER.debug("async_turn_off called: device_addr=%s, channel=%s, kwargs=%s",
+                     self._device.addr, self._channel, kwargs)
         self._update_state(False)
 
     def _update_state(self, state):
-        _LOGGER.debug("Switch channel %s to state %s", str(self._channel), str(state))
+        _LOGGER.debug("Updating switch state: device_addr=%s, channel=%s, state=%s",
+                     self._device.addr, self._channel, state)
         if state:
             self._device.set_switch_state(self._channel, 1)
         else:
             self._device.set_switch_state(self._channel, 0)
         self._state = state
         self.async_schedule_update_ha_state()
+        _LOGGER.debug("Switch state updated and HA state scheduled: device_addr=%s, channel=%s, is_on=%s",
+                     self._device.addr, self._channel, self._state)
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -58,20 +69,35 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
 
     async def async_internal_added_to_hass(self) -> None:
         """Call when the button is added to hass."""
+        _LOGGER.debug("Switch added to HA: device_addr=%s, channel=%s",
+                     self._device.addr, self._channel)
         await super().async_internal_added_to_hass()
         state = await self.async_get_last_state()
+        _LOGGER.debug("Restoring previous state: device_addr=%s, channel=%s, previous_state=%s",
+                     self._device.addr, self._channel, state.state if state else None)
         if state is not None and state.state not in (STATE_UNAVAILABLE, None):
             if state.state == STATE_ON:
+                _LOGGER.info("Restoring switch to ON: device_addr=%s, channel=%s",
+                           self._device.addr, self._channel)
                 self._update_state(True)
             else:
+                _LOGGER.info("Restoring switch to OFF: device_addr=%s, channel=%s",
+                           self._device.addr, self._channel)
                 self._update_state(False)
+        else:
+            _LOGGER.debug("No previous state to restore: device_addr=%s, channel=%s",
+                         self._device.addr, self._channel)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info):
+    _LOGGER.info("Setting up Ecto switch platform")
     devices = hass.data[DOMAIN]["devices"]
     relay = []
     for device in devices:
         if isinstance(device, EctoCH10BinarySensor):
+            _LOGGER.debug("Creating switches for device: addr=%s, channels=%s",
+                         device.addr, device.CHANNEL_COUNT)
             for channel in range(device.CHANNEL_COUNT):
                 relay.append(EctoChannelSwitch(device, channel))
+    _LOGGER.info("Created %d switch(es) for %d device(s)", len(relay), len(devices))
     async_add_entities(relay)
