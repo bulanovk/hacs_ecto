@@ -16,7 +16,7 @@ class EctoCH10BinarySensor(EctoDevice):
     def __init__(self, config, server: RtuServer):
         super().__init__(config, server)
         _LOGGER.debug("Initializing EctoCH10BinarySensor: addr=%s", self.addr)
-        reg = ModBusRegisterSensor(self.slave, cst.READ_INPUT_REGISTERS, 0x10, 1)
+        reg = ModBusRegisterSensor(self.slave, cst.READ_INPUT_REGISTERS, 0x10, 1, read_callback=self._on_register_read)
         self.registers[0x10] = reg
         self.switch = [0, 0, 0, 0, 0, 0, 0, 0]
         _LOGGER.info("EctoCH10BinarySensor initialized: addr=%s, channels=%s",
@@ -49,3 +49,8 @@ class EctoCH10BinarySensor(EctoDevice):
         _LOGGER.debug("Setting register 0x10 value: addr=%s, value=%s", self.addr, hex(value))
         self.registers[0x10].set_raw_value([value])
         _LOGGER.debug("Register 0x10 value set successfully: addr=%s", self.addr)
+
+    def _on_register_read(self, addr, values):
+        """Callback when register is read"""
+        if addr == 0x10:
+            _LOGGER.debug("Register 0x10 read: addr=%s, value=%s", self.addr, values)
