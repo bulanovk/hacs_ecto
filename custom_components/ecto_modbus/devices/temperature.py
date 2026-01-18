@@ -53,6 +53,6 @@ class EctoTemperatureSensor(EctoDevice):
             self.registers[0x20].set_raw_value([scaled_value])
             _LOGGER.debug("Temperature register updated: addr=%s, value=%s",
                          self.addr, scaled_value)
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError, TypeError) as e:
             _LOGGER.error("Error updating temperature: addr=%s, entity=%s, error=%s",
                          self.addr, entity, e)

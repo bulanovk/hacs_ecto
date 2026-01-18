@@ -54,7 +54,8 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
         else:
             self._device.set_switch_state(self._channel, 0)
         self._state = state
-        self.async_schedule_update_ha_state()
+        if self.hass is not None:
+            self.async_schedule_update_ha_state()
         _LOGGER.debug("Switch state updated and HA state scheduled: device_addr=%s, channel=%s, is_on=%s",
                      self._device.addr, self._channel, self._state)
 
@@ -79,11 +80,13 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
             if state.state == STATE_ON:
                 _LOGGER.info("Restoring switch to ON: device_addr=%s, channel=%s",
                            self._device.addr, self._channel)
-                self._update_state(True)
+                self._device.set_switch_state(self._channel, 1)
+                self._state = True
             else:
                 _LOGGER.info("Restoring switch to OFF: device_addr=%s, channel=%s",
                            self._device.addr, self._channel)
-                self._update_state(False)
+                self._device.set_switch_state(self._channel, 0)
+                self._state = False
         else:
             _LOGGER.debug("No previous state to restore: device_addr=%s, channel=%s",
                          self._device.addr, self._channel)
