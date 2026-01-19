@@ -27,12 +27,35 @@ def _log_modbus_request(data):
     try:
         request = data[0] if len(data) > 0 else None
         if request:
-            _LOGGER.debug("RT: Slave=%s, Func=%s, Addr=%s, Qty=%s, PDU=%s",
-                         getattr(request, 'slave_id', 'N/A'),
-                         getattr(request, 'function', 'N/A'),
-                         getattr(request, 'address', 'N/A'),
-                         getattr(request, 'quantity', 'N/A'),
-                         request._pdu if hasattr(request, '_pdu') else 'N/A')
+            # Try multiple possible attribute names
+            slave_id = getattr(request, 'slave_id', None) or getattr(request, 'slave', None) or 'N/A'
+            function = getattr(request, 'function', None) or getattr(request, 'func_code', None) or 'N/A'
+            address = getattr(request, 'address', None) or getattr(request, 'starting_address', None) or 'N/A'
+            quantity = getattr(request, 'quantity', None) or getattr(request, 'nr_of_registers', None) or 'N/A'
+            
+            # Try to get PDU/raw data
+            pdu = None
+            if hasattr(request, '_pdu'):
+                pdu = request._pdu
+            elif hasattr(request, 'pdu'):
+                pdu = request.pdu
+            elif hasattr(request, 'get_raw_data'):
+                try:
+                    pdu = request.get_raw_data()
+                except:
+                    pass
+            
+            # Log with hex dump of PDU if available
+            if pdu:
+                pdu_hex = ' '.join(f'{b:02x}' for b in pdu) if isinstance(pdu, (bytes, bytearray)) else str(pdu)
+                _LOGGER.debug("RT: Slave=%s, Func=%s, Addr=%s, Qty=%s, PDU=[%s]",
+                             slave_id, function, address, quantity, pdu_hex)
+            else:
+                _LOGGER.debug("RT: Slave=%s, Func=%s, Addr=%s, Qty=%s, PDU=N/A (type=%s)",
+                             slave_id, function, address, quantity, type(request).__name__)
+            
+            # Log all available attributes for debugging
+            _LOGGER.debug("RT: Request attributes: %s", [attr for attr in dir(request) if not attr.startswith('_')])
     except Exception as e:
         _LOGGER.debug("RT: Error parsing request data: %s, data=%s", e, data)
 
@@ -41,10 +64,29 @@ def _log_modbus_response(data):
     try:
         response = data[0] if len(data) > 0 else None
         if response:
-            _LOGGER.debug("TX: Slave=%s, Func=%s, PDU=%s",
-                         getattr(response, 'slave_id', 'N/A'),
-                         getattr(response, 'function', 'N/A'),
-                         response._pdu if hasattr(response, '_pdu') else 'N/A')
+            # Try multiple possible attribute names
+            slave_id = getattr(response, 'slave_id', None) or getattr(response, 'slave', None) or 'N/A'
+            function = getattr(response, 'function', None) or getattr(response, 'func_code', None) or 'N/A'
+            
+            # Try to get PDU/raw data
+            pdu = None
+            if hasattr(response, '_pdu'):
+                pdu = response._pdu
+            elif hasattr(response, 'pdu'):
+                pdu = response.pdu
+            elif hasattr(response, 'get_raw_data'):
+                try:
+                    pdu = response.get_raw_data()
+                except:
+                    pass
+            
+            # Log with hex dump of PDU if available
+            if pdu:
+                pdu_hex = ' '.join(f'{b:02x}' for b in pdu) if isinstance(pdu, (bytes, bytearray)) else str(pdu)
+                _LOGGER.debug("TX: Slave=%s, Func=%s, PDU=[%s]", slave_id, function, pdu_hex)
+            else:
+                _LOGGER.debug("TX: Slave=%s, Func=%s, PDU=N/A (type=%s)",
+                             slave_id, function, type(response).__name__)
     except Exception as e:
         _LOGGER.debug("TX: Error parsing response data: %s, data=%s", e, data)
 
