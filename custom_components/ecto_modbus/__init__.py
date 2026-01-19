@@ -22,73 +22,33 @@ from modbus_tk import utils
 
 _LOGGER = logging.getLogger(__name__)
 
-def _log_modbus_request(data):
-    """Hook to log incoming Modbus requests (RT - Receive)"""
-    try:
-        request = data[0] if len(data) > 0 else None
-        if request:
-            # Try multiple possible attribute names
-            slave_id = getattr(request, 'slave_id', None) or getattr(request, 'slave', None) or 'N/A'
-            function = getattr(request, 'function', None) or getattr(request, 'func_code', None) or 'N/A'
-            address = getattr(request, 'address', None) or getattr(request, 'starting_address', None) or 'N/A'
-            quantity = getattr(request, 'quantity', None) or getattr(request, 'nr_of_registers', None) or 'N/A'
-            
-            # Try to get PDU/raw data
-            pdu = None
-            if hasattr(request, '_pdu'):
-                pdu = request._pdu
-            elif hasattr(request, 'pdu'):
-                pdu = request.pdu
-            elif hasattr(request, 'get_raw_data'):
-                try:
-                    pdu = request.get_raw_data()
-                except:
-                    pass
-            
-            # Log with hex dump of PDU if available
-            if pdu:
-                pdu_hex = ' '.join(f'{b:02x}' for b in pdu) if isinstance(pdu, (bytes, bytearray)) else str(pdu)
-                _LOGGER.debug("RT: Slave=%s, Func=%s, Addr=%s, Qty=%s, PDU=[%s]",
-                             slave_id, function, address, quantity, pdu_hex)
-            else:
-                _LOGGER.debug("RT: Slave=%s, Func=%s, Addr=%s, Qty=%s, PDU=N/A (type=%s)",
-                             slave_id, function, address, quantity, type(request).__name__)
-            
-            # Log all available attributes for debugging
-            _LOGGER.debug("RT: Request attributes: %s", [attr for attr in dir(request) if not attr.startswith('_')])
-    except Exception as e:
-        _LOGGER.debug("RT: Error parsing request data: %s, data=%s", e, data)
 
-def _log_modbus_response(data):
-    """Hook to log outgoing Modbus responses (TX - Transmit)"""
-    try:
-        response = data[0] if len(data) > 0 else None
-        if response:
-            # Try multiple possible attribute names
-            slave_id = getattr(response, 'slave_id', None) or getattr(response, 'slave', None) or 'N/A'
-            function = getattr(response, 'function', None) or getattr(response, 'func_code', None) or 'N/A'
-            
-            # Try to get PDU/raw data
-            pdu = None
-            if hasattr(response, '_pdu'):
-                pdu = response._pdu
-            elif hasattr(response, 'pdu'):
-                pdu = response.pdu
-            elif hasattr(response, 'get_raw_data'):
-                try:
-                    pdu = response.get_raw_data()
-                except:
-                    pass
-            
-            # Log with hex dump of PDU if available
-            if pdu:
-                pdu_hex = ' '.join(f'{b:02x}' for b in pdu) if isinstance(pdu, (bytes, bytearray)) else str(pdu)
-                _LOGGER.debug("TX: Slave=%s, Func=%s, PDU=[%s]", slave_id, function, pdu_hex)
-            else:
-                _LOGGER.debug("TX: Slave=%s, Func=%s, PDU=N/A (type=%s)",
-                             slave_id, function, type(response).__name__)
-    except Exception as e:
-        _LOGGER.debug("TX: Error parsing response data: %s, data=%s", e, data)
+class LoggingSerialWrapper:
+    """Wrapper around serial port to log all RT/TX bytes"""
+    
+    def __init__(self, serial_port, logger, port_name):
+        self._serial = serial_port
+        self._logger = logger
+        self._port_name = port_name
+        
+    def read(self, size=1):
+        """Read and log bytes from serial port"""
+        data = self._serial.read(size)
+        if data:
+            hex_str = ' '.join(f'{b:02x}' for b in data)
+            self._logger.debug("RT: %s RX (%d bytes): %s", self._port_name, len(data), hex_str)
+        return data
+    
+    def write(self, data):
+        """Write and log bytes to serial port"""
+        hex_str = ' '.join(f'{b:02x}' for b in data)
+        self._logger.debug("TX: %s TX (%d bytes): %s", self._port_name, len(data), hex_str)
+        return self._serial.write(data)
+    
+    def __getattr__(self, name):
+        """Proxy all other attributes to the wrapped serial port"""
+        return getattr(self._serial, name)
+
 
 def _log_modbus_error(data):
     """Hook to log Modbus errors"""
@@ -158,11 +118,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _LOGGER.debug("Creating dummy logger for modbus_tk")
     logger = utils.create_logger(name="dummy",level=logging.DEBUG, record_format="%(message)s")
 
-    _LOGGER.debug("Installing Modbus RT/TX logging hooks")
-    hooks.install_hook("modbus.Slave.handle_request", _log_modbus_request)
-    hooks.install_hook("modbus.Slave.handle_response", _log_modbus_response)
+    _LOGGER.debug("Installing Modbus error logging hook")
     hooks.install_hook("modbus.Databank.on_error", _log_modbus_error)
-    _LOGGER.info("Modbus packet logging enabled (RT/TX)")
 
     port = conf.get("port")
     port_type = conf.get("port_type", PORT_TYPE_RS485)
@@ -177,6 +134,10 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         import serial
         port485_main = serial.Serial(port, baudrate=baudrate, timeout=0.002)
         _LOGGER.info("Serial port configured: %s, baudrate=%d", port, baudrate)
+
+    # Wrap serial port with logging
+    port485_main = LoggingSerialWrapper(port485_main, _LOGGER, port)
+    _LOGGER.info("Serial packet logging enabled for port %s", port)
 
     _LOGGER.debug("Creating Modbus RTU server")
     server19200 = modbus_rtu.RtuServer(port485_main, interchar_multiplier=1, error_on_missing_slave=False)
