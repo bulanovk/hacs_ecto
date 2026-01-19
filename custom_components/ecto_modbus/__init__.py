@@ -22,6 +22,31 @@ from modbus_tk import utils
 
 _LOGGER = logging.getLogger(__name__)
 
+def _log_modbus_request(data):
+    """Hook to log incoming Modbus requests (RT - Receive)"""
+    (request,) = data
+    if request:
+        _LOGGER.debug("RT: Slave=%s, Func=%s, Addr=%s, Qty=%s, PDU=%s",
+                     getattr(request, 'slave_id', 'N/A'),
+                     getattr(request, 'function', 'N/A'),
+                     getattr(request, 'address', 'N/A'),
+                     getattr(request, 'quantity', 'N/A'),
+                     request._pdu if hasattr(request, '_pdu') else 'N/A')
+
+def _log_modbus_response(data):
+    """Hook to log outgoing Modbus responses (TX - Transmit)"""
+    (response,) = data
+    if response:
+        _LOGGER.debug("TX: Slave=%s, Func=%s, PDU=%s",
+                     getattr(response, 'slave_id', 'N/A'),
+                     getattr(response, 'function', 'N/A'),
+                     response._pdu if hasattr(response, '_pdu') else 'N/A')
+
+def _log_modbus_error(data):
+    """Hook to log Modbus errors"""
+    (_, ex, request_pdu) = data
+    _LOGGER.error("Modbus Error: exception=%s, request_pdu=%s", ex, request_pdu)
+
 DEVICE_CLASSES = {
     'binary_sensor_10ch': EctoCH10BinarySensor,
     'relay_8ch': EctoRelay8CH,
@@ -72,6 +97,12 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     _LOGGER.debug("Creating dummy logger for modbus_tk")
     logger = utils.create_logger(name="dummy",level=logging.DEBUG, record_format="%(message)s")
+
+    _LOGGER.debug("Installing Modbus RT/TX logging hooks")
+    hooks.install_hook("modbus.Slave.handle_request", _log_modbus_request)
+    hooks.install_hook("modbus.Slave.handle_response", _log_modbus_response)
+    hooks.install_hook("modbus.Databank.on_error", _log_modbus_error)
+    _LOGGER.info("Modbus packet logging enabled (RT/TX)")
 
     port = conf.get("port")
     port_type = conf.get("port_type", PORT_TYPE_RS485)
