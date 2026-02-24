@@ -58,6 +58,7 @@ ecto_modbus:
 - Creates 10 switch entities for relay control
 - Channels 0-7 in MSB byte, channels 8-9 in LSB byte
 - Supports timer functionality per channel
+- **Bidirectional sync**: State changes from external Modbus masters automatically update HA switch states
 
 ## Example: Control Relay via Automation
 
