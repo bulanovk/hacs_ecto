@@ -107,8 +107,16 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
                 self._device.set_switch_state(self._channel, 0)
                 self._state = False
         else:
-            _LOGGER.debug("No previous state to restore: device_addr=%s, channel=%s",
-                         self._device.addr, self._channel)
+            # No previous HA state - sync from device's current channel state
+            if hasattr(self._device, 'get_channel_state'):
+                device_state = self._device.get_channel_state(self._channel)
+                if device_state is not None:
+                    self._state = bool(device_state)
+                    _LOGGER.info("Synced switch state from device: device_addr=%s, channel=%s, state=%s",
+                               self._device.addr, self._channel, self._state)
+            else:
+                _LOGGER.debug("No previous state to restore: device_addr=%s, channel=%s",
+                             self._device.addr, self._channel)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info):

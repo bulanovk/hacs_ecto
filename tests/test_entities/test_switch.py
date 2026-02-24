@@ -281,6 +281,7 @@ class TestEctoChannelSwitch:
         """Test async_internal_added_to_hass when previous state is None."""
         # Setup
         mock_device = MagicMock()
+        mock_device.get_channel_state = MagicMock(return_value=0)
         switch = EctoChannelSwitch(mock_device, channel=0)
 
         mock_last_state = MagicMock()
@@ -301,8 +302,37 @@ class TestEctoChannelSwitch:
         # Execute
         await switch.async_internal_added_to_hass()
 
-        # Assert - Should not restore state
-        mock_device.set_switch_state.assert_not_called()
+        # Assert - Should sync from device state
+        mock_device.get_channel_state.assert_called_once_with(0)
+
+    @pytest.mark.asyncio
+    async def test_async_internal_added_to_hass_syncs_from_device_state(self):
+        """Test that switch syncs from device channel state when no HA state exists."""
+        # Setup
+        mock_device = MagicMock()
+        mock_device.addr = 5
+        mock_device.get_channel_state = MagicMock(return_value=1)  # Device reports ON
+        mock_device.set_switch_state = MagicMock()
+        switch = EctoChannelSwitch(mock_device, channel=3)
+
+        switch.async_get_last_state = AsyncMock(return_value=None)
+
+        # Set up platform mock
+        mock_platform = MagicMock()
+        mock_platform.platform_name = 'switch'
+        switch.platform = mock_platform
+
+        # Set up hass mock
+        mock_hass = MagicMock()
+        mock_hass.data = {}
+        switch.hass = mock_hass
+
+        # Execute
+        await switch.async_internal_added_to_hass()
+
+        # Assert - Should sync from device (channel 3 = ON)
+        assert switch._state is True
+        mock_device.get_channel_state.assert_called_once_with(3)
 
     def test_multiple_channels_same_device(self):
         """Test creating multiple switches for same device."""
