@@ -149,6 +149,50 @@ class EctoRelay10CH(EctoDevice):
             _LOGGER.debug("State change callback set for relay addr=%s, channel=%s",
                          self.addr, channel)
 
+    def sync_channels_from_register(self):
+        """Sync channel states from the actual Modbus register value.
+
+        Reads the current value from register 0x10, parses channel states,
+        and triggers callbacks for any changed channels.
+
+        Returns:
+            bool: True if any channel state changed
+        """
+        values = self.registers[0x10].get_values()
+        if not values:
+            return False
+
+        value = values[0]
+        changed = False
+
+        # Parse MSB byte (channels 0-7, reversed bit order)
+        msb = (value >> 8) & 0xFF
+        for i in range(8):
+            bit_pos = 7 - i
+            new_state = (msb >> bit_pos) & 1
+
+            if self.channels[i] != new_state:
+                self.channels[i] = new_state
+                changed = True
+                _LOGGER.info("Channel %d changed to %d (detected via sync)", i, new_state)
+                if i in self._state_change_callbacks:
+                    self._state_change_callbacks[i](i, new_state)
+
+        # Parse LSB byte (channels 8-9)
+        lsb = value & 0xFF
+        for i in range(2):
+            channel = 8 + i
+            new_state = (lsb >> i) & 1
+
+            if self.channels[channel] != new_state:
+                self.channels[channel] = new_state
+                changed = True
+                _LOGGER.info("Channel %d changed to %d (detected via sync)", channel, new_state)
+                if channel in self._state_change_callbacks:
+                    self._state_change_callbacks[channel](channel, new_state)
+
+        return changed
+
     def on_register_write(self, reg_addr, values):
         """Handle external Modbus write to holding registers.
 

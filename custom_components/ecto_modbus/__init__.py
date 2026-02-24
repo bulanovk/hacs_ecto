@@ -1,5 +1,6 @@
 import logging
 import struct
+from datetime import timedelta
 
 import modbus_tk
 import voluptuous as vol
@@ -8,6 +9,7 @@ import voluptuous as vol
 # from pymodbus.datastore import ModbusSequentialDataBlock
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .devices import EctoCH10BinarySensor, EctoRelay10CH, EctoTemperatureSensor
 from .const import (
     DOMAIN,
@@ -72,54 +74,26 @@ def _log_modbus_error(data):
         _LOGGER.error("Modbus Error: Failed to parse error data: %s, data=%s", e, data)
 
 
-def _on_slave_handle_request(data):
-    """Hook to intercept Modbus write requests and sync to device state.
+class EctoCoordinator(DataUpdateCoordinator):
+    """Coordinator to sync device states from Modbus registers."""
 
-    This hook is called after a slave processes a request. We parse write
-    operations (function code 0x10 - Write Multiple Registers) and notify
-    the corresponding device so it can update its internal state and trigger HA updates.
+    def __init__(self, hass: HomeAssistant, devices: list):
+        """Initialize the coordinator."""
+        super().__init__(
+            hass,
+            _LOGGER,
+            name="ecto_modbus_coordinator",
+            update_interval=timedelta(seconds=5),
+        )
+        self.devices = devices
 
-    Note: Ectocontrol protocol only supports 0x10, not 0x06 (Write Single Register).
-    """
-    try:
-        # data is a tuple: (slave_id, request_pdu, response_pdu)
-        if len(data) < 3:
-            return
-
-        slave_id = data[0]
-        request_pdu = data[1]
-
-        if not request_pdu or len(request_pdu) < 6:
-            return
-
-        function_code = request_pdu[0]
-
-        # Function code 0x10 = Write Multiple Registers (only one supported by protocol)
-        if function_code != 0x10:
-            return
-
-        # Look up device by slave_id
-        device = _DEVICE_REGISTRY.get(slave_id)
-        if not device or not hasattr(device, 'on_register_write'):
-            return
-
-        # Write Multiple Registers: FC(1) + StartAddr(2) + RegCount(2) + ByteCount(1) + Values(N*2)
-        start_addr = struct.unpack(">H", request_pdu[1:3])[0]
-        reg_count = struct.unpack(">H", request_pdu[3:5])[0]
-        byte_count = request_pdu[5]
-
-        if len(request_pdu) >= 6 + byte_count:
-            values = []
-            for i in range(reg_count):
-                offset = 6 + i * 2
-                val = struct.unpack(">H", request_pdu[offset:offset+2])[0]
-                values.append(val)
-            _LOGGER.debug("Detected write multiple registers: slave=%s, addr=0x%04X, count=%d, values=%s",
-                         slave_id, start_addr, reg_count, [hex(v) for v in values])
-            device.on_register_write(start_addr, values)
-
-    except Exception as e:
-        _LOGGER.error("Error in _on_slave_handle_request: %s", e)
+    async def _async_update_data(self):
+        """Fetch data from Modbus registers and sync device states."""
+        for device in self.devices:
+            # Only sync devices that have the sync method (relays)
+            if hasattr(device, 'sync_channels_from_register'):
+                device.sync_channels_from_register()
+        return True
 
 DEVICE_CLASSES = {
     'binary_sensor_10ch': EctoCH10BinarySensor,
@@ -175,9 +149,6 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _LOGGER.debug("Installing Modbus error logging hook")
     hooks.install_hook("modbus.Databank.on_error", _log_modbus_error)
 
-    _LOGGER.debug("Installing Modbus write detection hook for sync")
-    hooks.install_hook("modbus.Slave.on_handle_request", _on_slave_handle_request)
-
     port = conf.get("port")
     port_type = conf.get("port_type", PORT_TYPE_RS485)
     baudrate = conf.get("baudrate", DEFAULT_BAUDRATE)
@@ -225,9 +196,14 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _LOGGER.info("All devices initialized: total=%d", len(ecto_devices))
     _LOGGER.debug("Storing devices and server in hass.data")
 
+    # Set up coordinator to sync device states from Modbus registers
+    coordinator = EctoCoordinator(hass, ecto_devices)
+    await coordinator.async_refresh()
+
     hass.data[DOMAIN] = {
         "devices": ecto_devices,
-        "rtu": server19200
+        "rtu": server19200,
+        "coordinator": coordinator
     }
 
     _LOGGER.debug("Loading switch platform")
