@@ -54,7 +54,7 @@ class TestConfigSchema:
                         'addr': 3
                     },
                     {
-                        'type': 'relay_8ch',
+                        'type': 'relay_10ch',
                         'addr': 5
                     }
                 ]
@@ -295,7 +295,7 @@ class TestAsyncSetup:
                 'devices': [
                     {'type': 'temperature_sensor', 'addr': 4, 'entity_id': 'sensor.test'},
                     {'type': 'binary_sensor_10ch', 'addr': 3},
-                    {'type': 'relay_8ch', 'addr': 5}
+                    {'type': 'relay_10ch', 'addr': 5}
                 ]
             }
         }
@@ -345,17 +345,17 @@ class TestDeviceClasses:
         """Test that all device types are mapped correctly."""
         # Assert
         assert 'binary_sensor_10ch' in DEVICE_CLASSES
-        assert 'relay_8ch' in DEVICE_CLASSES
+        assert 'relay_10ch' in DEVICE_CLASSES
         assert 'temperature_sensor' in DEVICE_CLASSES
 
     def test_device_classes_importable(self):
         """Test that all device classes can be imported."""
         from custom_components.ecto_modbus.devices import (
             EctoCH10BinarySensor,
-            EctoRelay8CH,
+            EctoRelay10CH,
             EctoTemperatureSensor
         )
 
         assert DEVICE_CLASSES['binary_sensor_10ch'] == EctoCH10BinarySensor
-        assert DEVICE_CLASSES['relay_8ch'] == EctoRelay8CH
+        assert DEVICE_CLASSES['relay_10ch'] == EctoRelay10CH
         assert DEVICE_CLASSES['temperature_sensor'] == EctoTemperatureSensor

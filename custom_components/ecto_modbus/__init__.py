@@ -7,7 +7,7 @@ import voluptuous as vol
 # from pymodbus.datastore import ModbusSequentialDataBlock
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
-from .devices import EctoCH10BinarySensor, EctoRelay8CH,EctoTemperatureSensor
+from .devices import EctoCH10BinarySensor, EctoRelay10CH, EctoTemperatureSensor
 from .const import (
     DOMAIN,
     DEFAULT_BAUDRATE,
@@ -69,7 +69,7 @@ def _log_modbus_error(data):
 
 DEVICE_CLASSES = {
     'binary_sensor_10ch': EctoCH10BinarySensor,
-    'relay_8ch': EctoRelay8CH,
+    'relay_10ch': EctoRelay10CH,
     'temperature_sensor': EctoTemperatureSensor
 
 }
@@ -96,7 +96,7 @@ CONFIG_SCHEMA = vol.Schema({
                     },
                     {
                         vol.Required("type"): vol.In(
-                            ['binary_sensor_10ch', 'relay_8ch']
+                            ['binary_sensor_10ch', 'relay_10ch']
                         ),
                         vol.Required("addr"): vol.All(
                             cv.positive_int,

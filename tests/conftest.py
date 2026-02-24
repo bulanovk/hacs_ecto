@@ -266,10 +266,10 @@ def binary_sensor_config():
 
 
 @pytest.fixture
-def relay_config():
-    """Configuration for relay tests."""
+def relay_10ch_config():
+    """Configuration for 10-channel relay tests."""
     return {
-        'type': 'relay_8ch',
+        'type': 'relay_10ch',
         'addr': 5
     }
 

@@ -7,6 +7,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import DOMAIN
 from .devices.binary_sensor import EctoCH10BinarySensor
+from .devices.relay import EctoRelay10CH
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,7 +98,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info)
     devices = hass.data[DOMAIN]["devices"]
     relay = []
     for device in devices:
-        if isinstance(device, EctoCH10BinarySensor):
+        if isinstance(device, (EctoCH10BinarySensor, EctoRelay10CH)):
             _LOGGER.debug("Creating switches for device: addr=%s, channels=%s",
                          device.addr, device.CHANNEL_COUNT)
             for channel in range(device.CHANNEL_COUNT):
