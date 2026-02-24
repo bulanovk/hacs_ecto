@@ -6,7 +6,7 @@ Home Assistant Custom Component for Ectocontrol RS485 devices
 | Type | Device | Channels | Description |
 |------|--------|----------|-------------|
 | `temperature_sensor` | EctoTemperatureSensor | 1 | Temperature input from HA entity |
-| `binary_sensor_10ch` | EctoCH10BinarySensor | 8 | 10-channel contact sensor splitter |
+| `binary_sensor_10ch` | EctoCH10BinarySensor | 10 | 10-channel contact sensor splitter |
 | `relay_10ch` | EctoRelay10CH | 10 | 10-channel relay control module |
 
 ## Configuration
@@ -51,7 +51,7 @@ ecto_modbus:
 - Scales value by 10 (e.g., 22.5°C → 225)
 
 ### Binary Sensor (10-channel)
-- Creates 8 switch entities for channel control
+- Creates 10 switch entities for channel control
 - Each channel maps to a bit in register 0x0010
 
 ### Relay (10-channel)
