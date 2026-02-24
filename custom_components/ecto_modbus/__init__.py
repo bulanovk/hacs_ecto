@@ -1,4 +1,5 @@
 import logging
+import struct
 
 import modbus_tk
 import voluptuous as vol
@@ -21,6 +22,9 @@ from serial import rs485
 from modbus_tk import utils
 
 _LOGGER = logging.getLogger(__name__)
+
+# Global device registry for hook callback
+_DEVICE_REGISTRY = {}
 
 
 class LoggingSerialWrapper:
@@ -66,6 +70,56 @@ def _log_modbus_error(data):
         _LOGGER.error("Modbus Error: exception=%s, request_pdu=%s", ex, request_pdu)
     except Exception as e:
         _LOGGER.error("Modbus Error: Failed to parse error data: %s, data=%s", e, data)
+
+
+def _on_slave_handle_request(data):
+    """Hook to intercept Modbus write requests and sync to device state.
+
+    This hook is called after a slave processes a request. We parse write
+    operations (function code 0x10 - Write Multiple Registers) and notify
+    the corresponding device so it can update its internal state and trigger HA updates.
+
+    Note: Ectocontrol protocol only supports 0x10, not 0x06 (Write Single Register).
+    """
+    try:
+        # data is a tuple: (slave_id, request_pdu, response_pdu)
+        if len(data) < 3:
+            return
+
+        slave_id = data[0]
+        request_pdu = data[1]
+
+        if not request_pdu or len(request_pdu) < 6:
+            return
+
+        function_code = request_pdu[0]
+
+        # Function code 0x10 = Write Multiple Registers (only one supported by protocol)
+        if function_code != 0x10:
+            return
+
+        # Look up device by slave_id
+        device = _DEVICE_REGISTRY.get(slave_id)
+        if not device or not hasattr(device, 'on_register_write'):
+            return
+
+        # Write Multiple Registers: FC(1) + StartAddr(2) + RegCount(2) + ByteCount(1) + Values(N*2)
+        start_addr = struct.unpack(">H", request_pdu[1:3])[0]
+        reg_count = struct.unpack(">H", request_pdu[3:5])[0]
+        byte_count = request_pdu[5]
+
+        if len(request_pdu) >= 6 + byte_count:
+            values = []
+            for i in range(reg_count):
+                offset = 6 + i * 2
+                val = struct.unpack(">H", request_pdu[offset:offset+2])[0]
+                values.append(val)
+            _LOGGER.debug("Detected write multiple registers: slave=%s, addr=0x%04X, count=%d, values=%s",
+                         slave_id, start_addr, reg_count, [hex(v) for v in values])
+            device.on_register_write(start_addr, values)
+
+    except Exception as e:
+        _LOGGER.error("Error in _on_slave_handle_request: %s", e)
 
 DEVICE_CLASSES = {
     'binary_sensor_10ch': EctoCH10BinarySensor,
@@ -121,6 +175,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _LOGGER.debug("Installing Modbus error logging hook")
     hooks.install_hook("modbus.Databank.on_error", _log_modbus_error)
 
+    _LOGGER.debug("Installing Modbus write detection hook for sync")
+    hooks.install_hook("modbus.Slave.on_handle_request", _on_slave_handle_request)
+
     port = conf.get("port")
     port_type = conf.get("port_type", PORT_TYPE_RS485)
     baudrate = conf.get("baudrate", DEFAULT_BAUDRATE)
@@ -160,7 +217,10 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             await device.async_init(hass)
 
         ecto_devices.append(device)
-        _LOGGER.debug("Device added to list: addr=%s", device_addr)
+
+        # Register device for Modbus write hook callback
+        _DEVICE_REGISTRY[device_addr] = device
+        _LOGGER.debug("Device registered for sync: addr=%s", device_addr)
 
     _LOGGER.info("All devices initialized: total=%d", len(ecto_devices))
     _LOGGER.debug("Storing devices and server in hass.data")

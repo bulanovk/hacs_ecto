@@ -18,8 +18,18 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
         self._device: EctoCH10BinarySensor = device
         self._channel = channel
         self._state = False
+        self._hass = None  # Will be set when added to HA
         _LOGGER.debug("EctoChannelSwitch created: device_addr=%s, channel=%s",
                      self._device.addr, self._channel)
+
+    def _on_device_state_change(self, channel, state):
+        """Callback when device state changes via external Modbus write."""
+        if channel == self._channel:
+            _LOGGER.info("Switch state changed via Modbus: device_addr=%s, channel=%s, state=%s",
+                        self._device.addr, self._channel, state)
+            self._state = bool(state)
+            if self._hass is not None:
+                self.async_schedule_update_ha_state()
 
     @property
     def unique_id(self):
@@ -70,10 +80,18 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
         )
 
     async def async_internal_added_to_hass(self) -> None:
-        """Call when the button is added to hass."""
+        """Call when the switch is added to hass."""
         _LOGGER.debug("Switch added to HA: device_addr=%s, channel=%s",
                      self._device.addr, self._channel)
+        self._hass = self.hass
         await super().async_internal_added_to_hass()
+
+        # Register callback for external Modbus writes
+        if hasattr(self._device, 'set_state_change_callback'):
+            self._device.set_state_change_callback(self._channel, self._on_device_state_change)
+            _LOGGER.debug("Registered state change callback: device_addr=%s, channel=%s",
+                         self._device.addr, self._channel)
+
         state = await self.async_get_last_state()
         _LOGGER.debug("Restoring previous state: device_addr=%s, channel=%s, previous_state=%s",
                      self._device.addr, self._channel, state.state if state else None)

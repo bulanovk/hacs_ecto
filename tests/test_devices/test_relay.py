@@ -332,3 +332,85 @@ class TestEctoRelay10CHHelpers:
         assert device.get_timer(-1) is None
         assert device.get_timer(10) is None
         assert device.get_timer(100) is None
+
+
+class TestEctoRelay10CHModbusSync:
+    """Test suite for Modbus → HA synchronization (external writes)."""
+
+    def test_on_register_write_updates_channels_from_msb(self, mock_modbus_server):
+        """Test that external Modbus write to register 0x10 updates channel states.
+
+        When an external Modbus master writes to holding register 0x10,
+        the relay should parse the value and update its internal channels[] array.
+
+        Register format:
+        - MSB byte: channels 0-7 (reversed bit order: bit 7 = ch0, bit 0 = ch7)
+        - LSB byte: channels 8-9 (bit 0 = ch8, bit 1 = ch9)
+        """
+        mock_server = MagicMock()
+        mock_server.add_slave.return_value = MagicMock()
+
+        config = {'addr': 5}
+        device = EctoRelay10CH(config, mock_server)
+
+        # All channels should start OFF
+        assert all(ch == 0 for ch in device.channels)
+
+        # Simulate external Modbus write: channel 0 ON
+        # Channel 0 maps to bit 7 of MSB, so value = 0x8000
+        device.on_register_write(0x10, [0x8000])
+
+        assert device.channels[0] == 1
+        assert device.channels[1] == 0
+
+    def test_on_register_write_updates_all_channels(self, mock_modbus_server):
+        """Test that external write correctly parses all 10 channels."""
+        mock_server = MagicMock()
+        mock_server.add_slave.return_value = MagicMock()
+
+        config = {'addr': 5}
+        device = EctoRelay10CH(config, mock_server)
+
+        # Simulate external Modbus write: all 10 channels ON
+        # MSB: 0xFF (channels 0-7 all ON), LSB: 0x03 (channels 8-9 ON)
+        device.on_register_write(0x10, [0xFF03])
+
+        # All channels should be ON
+        assert all(device.channels[ch] == 1 for ch in range(10))
+
+    def test_on_register_write_triggers_callback(self, mock_modbus_server):
+        """Test that external write triggers callback for HA state update."""
+        mock_server = MagicMock()
+        mock_server.add_slave.return_value = MagicMock()
+
+        config = {'addr': 5}
+        device = EctoRelay10CH(config, mock_server)
+
+        # Track callback invocations
+        callback_calls = []
+
+        def test_callback(channel, state):
+            callback_calls.append((channel, state))
+
+        device.set_state_change_callback(5, test_callback)
+
+        # Simulate external write: channel 5 ON
+        # Channel 5 maps to bit 2 of MSB (7-5=2), so value = (1 << 2) << 8 = 0x0400
+        device.on_register_write(0x10, [0x0400])
+
+        # Callback should be triggered for channel 5
+        assert (5, 1) in callback_calls
+
+    def test_on_register_write_ignores_wrong_register(self, mock_modbus_server):
+        """Test that writes to other registers are ignored."""
+        mock_server = MagicMock()
+        mock_server.add_slave.return_value = MagicMock()
+
+        config = {'addr': 5}
+        device = EctoRelay10CH(config, mock_server)
+
+        # Write to timer register (0x20) should not affect channels
+        device.on_register_write(0x20, [0xFFFF])
+
+        # Channels should remain unchanged
+        assert all(ch == 0 for ch in device.channels)

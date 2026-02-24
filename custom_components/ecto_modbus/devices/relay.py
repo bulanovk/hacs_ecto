@@ -33,6 +33,9 @@ class EctoRelay10CH(EctoDevice):
         # Track timer values (0-9)
         self.timers = [0] * 10
 
+        # Callbacks for state changes (to notify HA entities) - one per channel
+        self._state_change_callbacks = {}
+
         _LOGGER.info("EctoRelay10CH initialized: addr=%s, channels=%s",
                      self.addr, self.CHANNEL_COUNT)
 
@@ -133,3 +136,60 @@ class EctoRelay10CH(EctoDevice):
         if 0 <= channel < self.CHANNEL_COUNT:
             return self.timers[channel]
         return None
+
+    def set_state_change_callback(self, channel, callback):
+        """Set callback to be called when a specific channel state changes via Modbus.
+
+        Args:
+            channel: Channel number (0-9)
+            callback: Function taking (channel, state) arguments
+        """
+        if 0 <= channel < self.CHANNEL_COUNT:
+            self._state_change_callbacks[channel] = callback
+            _LOGGER.debug("State change callback set for relay addr=%s, channel=%s",
+                         self.addr, channel)
+
+    def on_register_write(self, reg_addr, values):
+        """Handle external Modbus write to holding registers.
+
+        This is called when an external Modbus master writes to our registers.
+        We need to parse the value and update our internal state accordingly.
+
+        Args:
+            reg_addr: Register address that was written
+            values: List of values written
+        """
+        if reg_addr != 0x10 or not values:
+            _LOGGER.debug("Ignoring write to register 0x%s", hex(reg_addr))
+            return
+
+        value = values[0]
+        _LOGGER.info("External Modbus write to register 0x10: addr=%s, value=%s",
+                     self.addr, hex(value))
+
+        # Parse MSB byte (channels 0-7, reversed bit order)
+        msb = (value >> 8) & 0xFF
+        for i in range(8):
+            # Channel i corresponds to bit (7-i) in MSB
+            bit_pos = 7 - i
+            new_state = (msb >> bit_pos) & 1
+
+            if self.channels[i] != new_state:
+                self.channels[i] = new_state
+                _LOGGER.debug("Channel %d changed to %d via Modbus write", i, new_state)
+                if i in self._state_change_callbacks:
+                    self._state_change_callbacks[i](i, new_state)
+
+        # Parse LSB byte (channels 8-9)
+        lsb = value & 0xFF
+        for i in range(2):
+            channel = 8 + i
+            new_state = (lsb >> i) & 1
+
+            if self.channels[channel] != new_state:
+                self.channels[channel] = new_state
+                _LOGGER.debug("Channel %d changed to %d via Modbus write", channel, new_state)
+                if channel in self._state_change_callbacks:
+                    self._state_change_callbacks[channel](channel, new_state)
+
+        _LOGGER.debug("Channel states after Modbus write: %s", self.channels)
