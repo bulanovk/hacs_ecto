@@ -10,8 +10,8 @@ _LOGGER = logging.getLogger(__name__)
 
 class EctoCH10BinarySensor(EctoDevice):
     """10-канальный бинарный датчик"""
-    DEVICE_TYPE = 0x5908
-    CHANNEL_COUNT = 8
+    DEVICE_TYPE = 0x59
+    CHANNEL_COUNT = 10
 
     def __init__(self, config, server: RtuServer):
         super().__init__(config, server)

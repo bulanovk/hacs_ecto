@@ -124,8 +124,9 @@ class TestEctoDevice:
             assert call_args[0][3] == 4
 
             # Check that set_raw_value was called with correct UID data
-            # UID data format: [0x80, (addr - 3), addr, device_type]
-            expected_data = [0x80, 2, 5, 0x00]
+            # UID data format: [0x80, (addr - 3), addr, (device_type << 8) | channel_count]
+            # For base class: type=0x00, channels=1 → (0x00 << 8) | 1 = 1
+            expected_data = [0x80, 2, 5, 1]
             mock_instance.set_raw_value.assert_called_once_with(expected_data)
 
     def test_multiple_addresses(self, mock_modbus_server):

@@ -12,7 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class EctoTemperatureSensor(EctoDevice):
     """Температурный датчик с 1 каналом"""
-    DEVICE_TYPE = 0x2201
+    DEVICE_TYPE = 0x22
     CHANNEL_COUNT = 1
     SCALE_FACTOR = 10  # Масштабирование значений (0.1°C)
 

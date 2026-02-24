@@ -10,12 +10,12 @@ class TestEctoCH10BinarySensor:
     """Test suite for EctoCH10BinarySensor class."""
 
     def test_device_type_constant(self):
-        """Test that DEVICE_TYPE is correct."""
-        assert EctoCH10BinarySensor.DEVICE_TYPE == 0x5908
+        """Test that DEVICE_TYPE is correct per protocol (0x59 = 10-channel contact sensor)."""
+        assert EctoCH10BinarySensor.DEVICE_TYPE == 0x59
 
     def test_channel_count_constant(self):
-        """Test that CHANNEL_COUNT is correct."""
-        assert EctoCH10BinarySensor.CHANNEL_COUNT == 8
+        """Test that CHANNEL_COUNT is correct (10 channels per protocol)."""
+        assert EctoCH10BinarySensor.CHANNEL_COUNT == 10
 
     def test_init_basic(self, mock_modbus_server):
         """Test basic initialization."""
@@ -31,8 +31,8 @@ class TestEctoCH10BinarySensor:
 
         # Assert
         assert device.addr == 3
-        assert device.DEVICE_TYPE == 0x5908
-        assert device.CHANNEL_COUNT == 8
+        assert device.DEVICE_TYPE == 0x59
+        assert device.CHANNEL_COUNT == 10
         assert device.switch == [0, 0, 0, 0, 0, 0, 0, 0]
         assert 0x10 in device.registers
 
@@ -281,7 +281,7 @@ class TestEctoCH10BinarySensor:
 
             # Assert
             assert device.addr == addr
-            assert device.DEVICE_TYPE == 0x5908
+            assert device.DEVICE_TYPE == 0x59
 
     def test_inheritance_from_ecto_device(self, mock_modbus_server):
         """Test that EctoCH10BinarySensor inherits from EctoDevice."""

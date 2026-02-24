@@ -10,8 +10,8 @@ class TestEctoTemperatureSensor:
     """Test suite for EctoTemperatureSensor class."""
 
     def test_device_type_constant(self):
-        """Test that DEVICE_TYPE is correct."""
-        assert EctoTemperatureSensor.DEVICE_TYPE == 0x2201
+        """Test that DEVICE_TYPE is correct per protocol (0x22 = temperature sensor)."""
+        assert EctoTemperatureSensor.DEVICE_TYPE == 0x22
 
     def test_channel_count_constant(self):
         """Test that CHANNEL_COUNT is correct."""
@@ -39,7 +39,7 @@ class TestEctoTemperatureSensor:
         # Assert
         assert device.addr == 4
         assert device.entity_id == 'sensor.test_temperature'
-        assert device.DEVICE_TYPE == 0x2201
+        assert device.DEVICE_TYPE == 0x22
         assert device.CHANNEL_COUNT == 1
         assert device._hass is None
         assert 0x20 in device.registers
@@ -280,7 +280,7 @@ class TestEctoTemperatureSensor:
 
             # Assert
             assert device.addr == addr
-            assert device.DEVICE_TYPE == 0x2201
+            assert device.DEVICE_TYPE == 0x22
 
     def test_inheritance_from_ecto_device(self, mock_modbus_server):
         """Test that EctoTemperatureSensor inherits from EctoDevice."""
