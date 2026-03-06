@@ -55,7 +55,7 @@ flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statist
 ### Component Structure
 ```
 custom_components/ecto_modbus/
-├── __init__.py      # Integration setup, Modbus server initialization, LoggingSerialWrapper
+├── __init__.py      # Integration setup, Modbus server, EctoCoordinator, LoggingSerialWrapper
 ├── const.py         # Domain constants, device types, port types
 ├── switch.py        # EctoChannelSwitch entities for binary sensor channels
 ├── config_flow.py   # UI config (disabled, uses YAML)
@@ -85,7 +85,7 @@ EctoDevice (base class)
 1. **Integration setup** (`__init__.py:async_setup`):
    - Creates RS485/Serial port (wrapped with LoggingSerialWrapper for packet logging)
    - Starts `modbus_tk.RtuServer`
-   - Installs `modbus.Slave.on_handle_request` hook for write detection
+   - Creates `EctoCoordinator` for periodic Modbus-to-HA sync (5-second interval)
    - Instantiates device classes based on YAML config
    - Registers devices in `_DEVICE_REGISTRY` for callback routing
    - Loads switch platform for binary sensor channels
@@ -97,7 +97,7 @@ EctoDevice (base class)
 
 3. **Relay channels (bidirectional sync)**:
    - **HA → Modbus**: `EctoChannelSwitch.async_turn_on/off()` → `set_switch_state()` → register write
-   - **Modbus → HA**: Hook intercepts `0x10` writes → `on_register_write()` parses channel states → triggers callbacks → HA state updates
+   - **Modbus → HA**: `EctoCoordinator` polls every 5s → `sync_channels_from_register()` reads register 0x10 → triggers per-channel callbacks → HA state updates
    - Each switch registers a per-channel callback via `set_state_change_callback(channel, callback)`
 
 4. **Temperature sensor**:
@@ -106,11 +106,12 @@ EctoDevice (base class)
 
 ### Key Implementation Details
 
-- **Channel bit reversal**: Binary sensor and relay channels use reversed indexing (`7 - channel`)
+- **Binary sensor mapping**: Reversed bit order (`7 - channel`) - channel 0 → bit 7
+- **Relay mapping**: Direct bit mapping per protocol 4.2 (`BIT_NO = CHN_NO % 8`) - channel N → bit N
 - **Temperature scaling**: Values multiplied by 10 (e.g., 22.5°C → 225)
-- **State persistence**: `EctoChannelSwitch` extends `RestoreEntity` for HA restart recovery
+- **State persistence**: Binary sensors restore state via `RestoreEntity`; relays always start OFF (no persistence)
 - **Packet logging**: `LoggingSerialWrapper` logs all RT/TX bytes as hex
-- **Bidirectional sync**: Relays sync state from external Modbus writes via `modbus.Slave.on_handle_request` hook
+- **Bidirectional sync**: Relays sync state via `EctoCoordinator` periodic polling (5s interval)
 - **Protocol support**: Only function code `0x10` (Write Multiple Registers) is supported for external writes
 
 ### Configuration (YAML only)
