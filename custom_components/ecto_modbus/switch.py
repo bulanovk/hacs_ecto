@@ -101,31 +101,39 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
             _LOGGER.debug("Registered state change callback: device_addr=%s, channel=%s",
                          self._device.addr, self._channel)
 
-        state = await self.async_get_last_state()
-        _LOGGER.debug("Restoring previous state: device_addr=%s, channel=%s, previous_state=%s",
-                     self._device.addr, self._channel, state.state if state else None)
-        if state is not None and state.state not in (STATE_UNAVAILABLE, None):
-            if state.state == STATE_ON:
-                _LOGGER.info("Restoring switch to ON: device_addr=%s, channel=%s",
-                           self._device.addr, self._channel)
-                self._device.set_switch_state(self._channel, 1)
-                self._state = True
-            else:
-                _LOGGER.info("Restoring switch to OFF: device_addr=%s, channel=%s",
-                           self._device.addr, self._channel)
-                self._device.set_switch_state(self._channel, 0)
-                self._state = False
+        # Relays should NOT persist state after restart - always start OFF
+        # Binary sensors can restore their previous state
+        if isinstance(self._device, EctoRelay10CH):
+            _LOGGER.info("Relay switch initialized without state persistence: device_addr=%s, channel=%s",
+                        self._device.addr, self._channel)
+            self._state = False
+            self._device.set_switch_state(self._channel, 0)
         else:
-            # No previous HA state - sync from device's current channel state
-            if hasattr(self._device, 'get_channel_state'):
-                device_state = self._device.get_channel_state(self._channel)
-                if device_state is not None:
-                    self._state = bool(device_state)
-                    _LOGGER.info("Synced switch state from device: device_addr=%s, channel=%s, state=%s",
-                               self._device.addr, self._channel, self._state)
+            state = await self.async_get_last_state()
+            _LOGGER.debug("Restoring previous state: device_addr=%s, channel=%s, previous_state=%s",
+                         self._device.addr, self._channel, state.state if state else None)
+            if state is not None and state.state not in (STATE_UNAVAILABLE, None):
+                if state.state == STATE_ON:
+                    _LOGGER.info("Restoring switch to ON: device_addr=%s, channel=%s",
+                               self._device.addr, self._channel)
+                    self._device.set_switch_state(self._channel, 1)
+                    self._state = True
+                else:
+                    _LOGGER.info("Restoring switch to OFF: device_addr=%s, channel=%s",
+                               self._device.addr, self._channel)
+                    self._device.set_switch_state(self._channel, 0)
+                    self._state = False
             else:
-                _LOGGER.debug("No previous state to restore: device_addr=%s, channel=%s",
-                             self._device.addr, self._channel)
+                # No previous HA state - sync from device's current channel state
+                if hasattr(self._device, 'get_channel_state'):
+                    device_state = self._device.get_channel_state(self._channel)
+                    if device_state is not None:
+                        self._state = bool(device_state)
+                        _LOGGER.info("Synced switch state from device: device_addr=%s, channel=%s, state=%s",
+                                   self._device.addr, self._channel, self._state)
+                else:
+                    _LOGGER.debug("No previous state to restore: device_addr=%s, channel=%s",
+                                 self._device.addr, self._channel)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info):
