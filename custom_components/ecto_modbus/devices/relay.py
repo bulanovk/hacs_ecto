@@ -159,10 +159,15 @@ class EctoRelay10CH(EctoDevice):
             bool: True if any channel state changed
         """
         values = self.registers[0x10].get_values()
+        _LOGGER.debug("sync_channels_from_register: addr=%s, values=%s, type=%s",
+                     self.addr, values, type(values))
         if not values:
+            _LOGGER.warning("sync_channels_from_register: No values returned for addr=%s", self.addr)
             return False
 
         value = values[0]
+        _LOGGER.debug("sync_channels_from_register: addr=%s, register_value=%s (0x%04X), current_channels=%s",
+                     self.addr, value, value, self.channels)
         changed = False
 
         # Parse MSB byte (channels 0-7, reversed bit order)
@@ -176,7 +181,11 @@ class EctoRelay10CH(EctoDevice):
                 changed = True
                 _LOGGER.info("Channel %d changed to %d (detected via sync)", i, new_state)
                 if i in self._state_change_callbacks:
+                    _LOGGER.debug("Calling callback for channel %d, callback=%s", i, self._state_change_callbacks[i])
                     self._state_change_callbacks[i](i, new_state)
+                else:
+                    _LOGGER.warning("No callback registered for channel %d, registered channels: %s",
+                                   i, list(self._state_change_callbacks.keys()))
 
         # Parse LSB byte (channels 8-9)
         lsb = value & 0xFF
@@ -189,8 +198,14 @@ class EctoRelay10CH(EctoDevice):
                 changed = True
                 _LOGGER.info("Channel %d changed to %d (detected via sync)", channel, new_state)
                 if channel in self._state_change_callbacks:
+                    _LOGGER.debug("Calling callback for channel %d, callback=%s", channel, self._state_change_callbacks[channel])
                     self._state_change_callbacks[channel](channel, new_state)
+                else:
+                    _LOGGER.warning("No callback registered for channel %d, registered channels: %s",
+                                   channel, list(self._state_change_callbacks.keys()))
 
+        _LOGGER.debug("sync_channels_from_register complete: addr=%s, changed=%s, channels=%s",
+                     self.addr, changed, self.channels)
         return changed
 
     def on_register_write(self, reg_addr, values):

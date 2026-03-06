@@ -24,12 +24,21 @@ class EctoChannelSwitch(SwitchEntity, RestoreEntity):
 
     def _on_device_state_change(self, channel, state):
         """Callback when device state changes via external Modbus write."""
+        _LOGGER.debug("_on_device_state_change called: device_addr=%s, channel=%s, state=%s, my_channel=%s",
+                     self._device.addr, channel, state, self._channel)
         if channel == self._channel:
             _LOGGER.info("Switch state changed via Modbus: device_addr=%s, channel=%s, state=%s",
                         self._device.addr, self._channel, state)
             self._state = bool(state)
+            _LOGGER.debug("Attempting to schedule HA state update: _hass=%s, hass=%s",
+                         self._hass, self.hass if hasattr(self, 'hass') else 'N/A')
             if self._hass is not None:
                 self.async_schedule_update_ha_state()
+                _LOGGER.debug("HA state update scheduled for device_addr=%s, channel=%s",
+                             self._device.addr, self._channel)
+            else:
+                _LOGGER.warning("Cannot schedule HA state update: _hass is None for device_addr=%s, channel=%s",
+                               self._device.addr, self._channel)
 
     @property
     def unique_id(self):

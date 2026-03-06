@@ -89,9 +89,11 @@ class EctoCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch data from Modbus registers and sync device states."""
+        _LOGGER.debug("Coordinator _async_update_data called")
         for device in self.devices:
             # Only sync devices that have the sync method (relays)
             if hasattr(device, 'sync_channels_from_register'):
+                _LOGGER.debug("Calling sync_channels_from_register for device addr=%s", device.addr)
                 device.sync_channels_from_register()
         return True
 
