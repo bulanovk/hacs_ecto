@@ -9,6 +9,7 @@ import voluptuous as vol
 # from pymodbus.datastore import ModbusSequentialDataBlock
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .devices import EctoCH10BinarySensor, EctoRelay10CH, EctoTemperatureSensor
 from .const import (
@@ -202,10 +203,17 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     coordinator = EctoCoordinator(hass, ecto_devices)
     await coordinator.async_refresh()
 
+    # Schedule periodic coordinator updates for YAML-based integration
+    # (async_refresh only runs once, need explicit scheduling for periodic updates)
+    unsub_interval = async_track_time_interval(
+        hass, lambda _: coordinator.async_refresh(), timedelta(seconds=5)
+    )
+
     hass.data[DOMAIN] = {
         "devices": ecto_devices,
         "rtu": server19200,
-        "coordinator": coordinator
+        "coordinator": coordinator,
+        "unsub_interval": unsub_interval
     }
 
     _LOGGER.debug("Loading switch platform")

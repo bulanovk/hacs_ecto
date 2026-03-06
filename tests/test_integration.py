@@ -189,7 +189,8 @@ class TestIntegrationWithoutPTY:
 
         with patch('custom_components.ecto_modbus.rs485.RS485') as mock_rs485, \
              patch('custom_components.ecto_modbus.modbus_rtu.RtuServer') as mock_server_class, \
-             patch('custom_components.ecto_modbus.load_platform') as mock_load_platform:
+             patch('custom_components.ecto_modbus.load_platform') as mock_load_platform, \
+             patch('custom_components.ecto_modbus.async_track_time_interval') as mock_track:
 
             mock_server = MagicMock()
             mock_server.start = MagicMock()
