@@ -40,43 +40,41 @@ class EctoRelay10CH(EctoDevice):
                      self.addr, self.CHANNEL_COUNT)
 
     def set_switch_state(self, num, state):
-        """Set relay channel state using same bit mapping as binary sensor.
+        """Set relay channel state per Modbus protocol section 4.2.
 
-        Bit mapping:
-        - Channels 0-7 in MSB byte (bits 15-8)
-        - Channels 8-9 in LSB byte (bits 7-0)
+        Register 0x10 format (16-bit):
+        - MSB byte (bits 15-8): CHN 0-7, BIT_NO = CHN_NO % 8
+        - LSB byte (bits 7-0): CHN 8-9, BIT_NO = CHN_NO % 8
+
+        Direct bit mapping: Channel N → Bit (N % 8) in byte (N / 8)
         """
-        original_num = num
-        num = 7 - num  # Same reversal as binary sensor
+        _LOGGER.debug("set_switch_state called: channel=%s, state=%s, "
+                      "current_states=%s", num, state, self.channels)
 
-        _LOGGER.debug("set_switch_state called: channel=%s (mapped=%s), state=%s, "
-                      "current_states=%s", original_num, num, state, self.channels)
-
-        if state != self.channels[original_num]:
-            _LOGGER.debug("Toggle relay channel %s (channel %s) to %s",
-                          num + 1, original_num, state)
+        if state != self.channels[num]:
+            _LOGGER.debug("Toggle relay channel %s to %s", num, state)
             state_value = 1 if state else 0
-            self.channels[original_num] = state_value
+            self.channels[num] = state_value
 
-            # Calculate bit pattern for channels 0-7 (in MSB)
-            value = 0
+            # Calculate MSB byte (channels 0-7): direct bit mapping
+            msb = 0
             for i in range(8):
-                value = (value << 1) + self.channels[7 - i]
+                if self.channels[i]:
+                    msb |= (1 << i)  # Channel i → Bit i
 
-            # Add channels 8-9 (in LSB)
+            # Calculate LSB byte (channels 8-9): direct bit mapping
             lsb = 0
             if self.channels[8]:
-                lsb |= 0x01
+                lsb |= (1 << 0)  # Channel 8 → Bit 0
             if self.channels[9]:
-                lsb |= 0x02
+                lsb |= (1 << 1)  # Channel 9 → Bit 1
 
-            final_value = (value << 8) | lsb
-            _LOGGER.debug("Calculated register value: channels=%s, value=%s",
-                          self.channels, hex(final_value))
+            final_value = (msb << 8) | lsb
+            _LOGGER.debug("Calculated register value: channels=%s, msb=0x%02X, lsb=0x%02X, value=0x%04X",
+                          self.channels, msb, lsb, final_value)
             self.registers[0x10].set_raw_value([final_value])
         else:
-            _LOGGER.debug("Relay channel %s (channel %s) already in state %s, "
-                          "skipping", num + 1, original_num, state)
+            _LOGGER.debug("Relay channel %s already in state %s, skipping", num, state)
 
     def set_timer(self, channel, initial_state, timeout_seconds):
         """Set timer for relay channel.
@@ -170,11 +168,10 @@ class EctoRelay10CH(EctoDevice):
                      self.addr, value, value, self.channels)
         changed = False
 
-        # Parse MSB byte (channels 0-7, reversed bit order)
+        # Parse MSB byte (channels 0-7): BIT_NO = CHN_NO % 8
         msb = (value >> 8) & 0xFF
         for i in range(8):
-            bit_pos = 7 - i
-            new_state = (msb >> bit_pos) & 1
+            new_state = (msb >> i) & 1  # Direct: Channel i → Bit i
 
             if self.channels[i] != new_state:
                 self.channels[i] = new_state
@@ -226,12 +223,10 @@ class EctoRelay10CH(EctoDevice):
         _LOGGER.info("External Modbus write to register 0x10: addr=%s, value=%s",
                      self.addr, hex(value))
 
-        # Parse MSB byte (channels 0-7, reversed bit order)
+        # Parse MSB byte (channels 0-7): BIT_NO = CHN_NO % 8
         msb = (value >> 8) & 0xFF
         for i in range(8):
-            # Channel i corresponds to bit (7-i) in MSB
-            bit_pos = 7 - i
-            new_state = (msb >> bit_pos) & 1
+            new_state = (msb >> i) & 1  # Direct: Channel i → Bit i
 
             if self.channels[i] != new_state:
                 self.channels[i] = new_state

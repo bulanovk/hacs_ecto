@@ -343,8 +343,8 @@ class TestEctoRelay10CHModbusSync:
         When an external Modbus master writes to holding register 0x10,
         the relay should parse the value and update its internal channels[] array.
 
-        Register format:
-        - MSB byte: channels 0-7 (reversed bit order: bit 7 = ch0, bit 0 = ch7)
+        Register format per protocol section 4.2 (BIT_NO = CHN_NO % 8):
+        - MSB byte: channels 0-7 (direct: bit 0 = ch0, bit 7 = ch7)
         - LSB byte: channels 8-9 (bit 0 = ch8, bit 1 = ch9)
         """
         mock_server = MagicMock()
@@ -357,8 +357,8 @@ class TestEctoRelay10CHModbusSync:
         assert all(ch == 0 for ch in device.channels)
 
         # Simulate external Modbus write: channel 0 ON
-        # Channel 0 maps to bit 7 of MSB, so value = 0x8000
-        device.on_register_write(0x10, [0x8000])
+        # Channel 0 maps to bit 0 of MSB, so value = 0x0100
+        device.on_register_write(0x10, [0x0100])
 
         assert device.channels[0] == 1
         assert device.channels[1] == 0
@@ -395,8 +395,8 @@ class TestEctoRelay10CHModbusSync:
         device.set_state_change_callback(5, test_callback)
 
         # Simulate external write: channel 5 ON
-        # Channel 5 maps to bit 2 of MSB (7-5=2), so value = (1 << 2) << 8 = 0x0400
-        device.on_register_write(0x10, [0x0400])
+        # Direct mapping: Channel 5 → bit 5 of MSB, so value = (1 << 5) << 8 = 0x2000
+        device.on_register_write(0x10, [0x2000])
 
         # Callback should be triggered for channel 5
         assert (5, 1) in callback_calls
