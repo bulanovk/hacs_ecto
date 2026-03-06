@@ -205,8 +205,12 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     # Schedule periodic coordinator updates for YAML-based integration
     # (async_refresh only runs once, need explicit scheduling for periodic updates)
+    async def scheduled_update(_now):
+        """Trigger coordinator update."""
+        await coordinator.async_refresh()
+
     unsub_interval = async_track_time_interval(
-        hass, lambda _: coordinator.async_refresh(), timedelta(seconds=5)
+        hass, scheduled_update, timedelta(seconds=5)
     )
 
     hass.data[DOMAIN] = {
