@@ -3,3 +3,5 @@ venv
 .venv
 .coverage
 coverage.xml
+**/_pycache_/
+.claude/settings.local.json
